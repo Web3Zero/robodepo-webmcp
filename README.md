@@ -233,26 +233,55 @@ form doesn't change.
 Robodepo sits outside both camps, behaving like the proxies in one respect and the
 merchant tooling in another, without either dependency:
 
-- The shop does nothing. Robodepo lists disclosed-source products and runs the whole
-  purchase on the shop's behalf, so a store that never installed WebMCP, never joined a
-  merchant program and never heard the word agent is still agent-completable through
-  Robodepo.
-- The agent gets information it cannot get elsewhere in one place: source retailer and
-  price disclosed side by side; evidence from manuals, reviews and permitted transcripts
-  is on the roadmap; a shortlist built for each request is on the roadmap.
-- The human keeps the irreversible step by construction, not by policy: no tool call can
-  place an order, only a person on Robodepo's own confirmation page can.
+- The shop does nothing. Robodepo aggregates instead of proxying one store at a time: it
+  lists a store's products, discloses that store as the source, and buys from it under
+  the store's own published rules on the human's behalf, so a store that never installed
+  WebMCP, never joined a merchant program and never heard the word agent is still
+  agent-completable, and the same tools work across every store Robodepo lists.
+- The agent gets information it cannot get elsewhere: source retailer and price disclosed
+  side by side; evidence and a shortlist, both on the roadmap.
+- The human keeps the irreversible step by construction, not by policy.
 - Completion is measured, not claimed. A sealed evaluation rig runs real agents through
   the real purchase path and audits the results, so "it works for agents" is a checked
   result, not a claim.
 - Nothing to install, for the agent, the human or the shop: WebMCP tools sit on the page,
-  and underneath is plain HTTPS any agent can call.
+  plain HTTPS underneath.
 - The tool names, `search_catalog`, `get_product`, `create_checkout`, `cancel_checkout`,
   `get_order`, match the dialect UCP, Shopify and ACP have already converged on.
 
 The nearest things are protocols that ask every shop to integrate, or agents that scrape.
 Robodepo is the store that already did the work. The full sourced comparison, including
 who was checked and when, is in [`docs/story.md`](./docs/story.md).
+
+### Responses that tell the agent what to do next
+
+Every response carries a `status` the agent branches on, one or more `messages` naming
+the exact field and the exact fix, `next_actions` computed from the current state with
+the retry already filled in, and separate `instructions` for the agent and for the
+human. An error is never actionless: the agent gets what it needs to correct its own
+mistake without stopping to ask a person.
+
+Here is a real one, trimmed to the fields that matter: what `create_checkout` returns
+when asked to ship to a postcode this sandbox does not accept.
+
+```json
+{
+  "status": "incomplete",
+  "messages": [{
+    "code": "address_not_accepted",
+    "severity": "requires_buyer_input",
+    "path": "$.shipping_address",
+    "content": "Use the accepted sandbox address, then call create_checkout again."
+  }],
+  "next_actions": [
+    { "tool": "create_checkout", "why": "Price the order and get the approval link." },
+    { "tool": "submit_feedback", "why": "Say what was unclear, missing or wrong." }
+  ]
+}
+```
+
+Trimmed from the full envelope, which also carries `resource` and `links`; the request
+never reached the store, caught client-side before any network call.
 
 ## Prior work vs new work
 
