@@ -1284,12 +1284,26 @@ export const TOOLS = Object.freeze([
   },
 ]);
 
+/**
+ * The catalogue in publication order: the eight operational tools first, then
+ * the six previews, each group keeping its own order.
+ *
+ * The literal above is already written this way, so this changes nothing
+ * today. It exists so that adding a tool in the wrong place cannot quietly
+ * bury a working tool below six that return `not_available` — a host reads
+ * this order, and an agent skimming it should meet the real ones first.
+ */
+export const ORDERED_TOOLS = Object.freeze([
+  ...TOOLS.filter((tool) => tool.kind === "operational"),
+  ...TOOLS.filter((tool) => tool.kind !== "operational"),
+]);
+
 export const OPERATIONAL_TOOL_NAMES = Object.freeze(
-  TOOLS.filter((tool) => tool.kind === "operational").map((tool) => tool.name),
+  ORDERED_TOOLS.filter((tool) => tool.kind === "operational").map((tool) => tool.name),
 );
 
 export const PREVIEW_TOOL_NAMES = Object.freeze(
-  TOOLS.filter((tool) => tool.kind === "preview").map((tool) => tool.name),
+  ORDERED_TOOLS.filter((tool) => tool.kind === "preview").map((tool) => tool.name),
 );
 
 /**
@@ -1297,7 +1311,7 @@ export const PREVIEW_TOOL_NAMES = Object.freeze(
  * reading the source, prints. No `execute`, no closures, JSON-serialisable.
  */
 export function TOOL_CATALOGUE_JSON() {
-  return TOOLS.map((tool) => ({
+  return ORDERED_TOOLS.map((tool) => ({
     name: tool.name,
     title: tool.title,
     operational: tool.kind === "operational",
@@ -2562,7 +2576,7 @@ export function createRobodepoTools(options = {}) {
 
   /** The catalogue as a host would list it. */
   function list() {
-    return TOOLS.map((tool) => ({
+    return ORDERED_TOOLS.map((tool) => ({
       name: tool.name,
       title: tool.title,
       kind: tool.kind,
@@ -2598,7 +2612,7 @@ export function createRobodepoTools(options = {}) {
       return { available: false, registered: 0 };
     }
 
-    const descriptors = TOOLS.map((tool) => ({
+    const descriptors = ORDERED_TOOLS.map((tool) => ({
       name: tool.name,
       title: tool.title,
       description: tool.description,
@@ -2675,6 +2689,9 @@ export function createRobodepoTools(options = {}) {
 
 const ACTIVITY_LIMIT = 50;
 
+/** Marks where the working tools end and the roadmap ones begin. */
+export const PREVIEW_DIVIDER_LABEL = "Preview tools: roadmap only, not for real use";
+
 /** Section order and labels for a rendered guide. */
 const GUIDE_SECTIONS = [
   ["summary", "Summary"],
@@ -2741,8 +2758,22 @@ export function mountAgentPage(tools, doc, registration) {
 
   const catalogue = tools.list();
 
+  let previewDividerDrawn = false;
   for (const tool of catalogue) {
     const item = doc.createElement("li");
+
+    // The divider between the working tools and the roadmap ones. It is the
+    // first child of the first preview rather than an `<li>` of its own so
+    // that `#tool-list li` still counts exactly one row per tool; promote it
+    // to its own row only alongside the tests that count those rows.
+    if (tool.kind === "preview" && !previewDividerDrawn) {
+      previewDividerDrawn = true;
+      const divider = doc.createElement("p");
+      divider.className = "tool-divider";
+      divider.textContent = PREVIEW_DIVIDER_LABEL;
+      item.append(divider);
+    }
+
     const name = doc.createElement("span");
     name.className = "tool-name";
     name.textContent = tool.name;
@@ -2844,6 +2875,8 @@ export function mountAgentPage(tools, doc, registration) {
 function wireCopyPromptButton(doc) {
   const button = doc.getElementById("copy-prompt-button");
   const source = doc.getElementById("agent-prompt");
+  // Optional page furniture. A page without the prompt block is a page
+  // without a copy button, not an error, and the tool list must still render.
   if (!button || !source) {
     return;
   }

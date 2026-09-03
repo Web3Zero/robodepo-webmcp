@@ -25,106 +25,57 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="robots" content="noindex, nofollow">
-<title>Robodepo agent tools</title>
+<title>Robodepo</title>
 <link rel="stylesheet" href="./agent.css">
 </head>
 <body>
+<header class="masthead">
+<div class="wordmark">Robodepo</div>
+<p class="tagline">For shopping agents, and the people they shop for.</p>
+</header>
 <main>
 
-<header class="hero">
-<p class="eyebrow">Public validation sandbox</p>
-<h1>Shopping agents can find products. They still fail at checkout.</h1>
-<p class="lede">Robodepo is the evidence and transaction layer built for shopping agents: trustworthy machine-readable product information, one reliable path to a prepared order, and one final decision that stays with the person.</p>
-<p class="hero-note">No real charge, retailer order or fulfilment can occur.</p>
+<section class="hero">
+<h1>Agents can find products. They still fail at checkout.</h1>
+<p class="hero-sub">Robodepo is a store built for AI shopping agents: trustworthy product information, one call to a prepared order, and one final decision that stays with you.</p>
 <p id="webmcp-status" class="status-pill">Checking this browser for WebMCP&#8230;</p>
-</header>
+</section>
 
-<section class="section-try">
-<div class="section-head"><span class="kicker">01</span><h2>Try the complete journey</h2></div>
-<div class="prompt-block">
-<pre class="prompt"><code id="agent-prompt">Find the beige canvas bucket hat in L-XL, show me its source and delivered price, prepare the sandbox checkout, then give me the approval link. Do not confirm it for me.</code></pre>
-<button type="button" id="copy-prompt-button" class="copy-button" aria-live="polite">Copy</button>
+<section class="capabilities">
+<h2>What your agent can do here today</h2>
+<div class="capability-grid">
+<article class="capability-card">
+<h3>Find and check the product</h3>
+<p>The source retailer, the source price and Robodepo&#39;s price, shown side by side on every listing.</p>
+<p class="chip-row"><code class="chip">search_catalog</code><code class="chip">get_product</code></p>
+</article>
+<article class="capability-card">
+<h3>Prepare the order in one call</h3>
+<p>Cart, address, delivery quote and a priced purchase mandate, ready for you to open.</p>
+<p class="chip-row"><code class="chip">create_checkout</code></p>
+</article>
+<article class="capability-card">
+<h3>Verify and follow up</h3>
+<p>Read the order back, check the trust manifest, leave feedback or cancel before you confirm.</p>
+<p class="chip-row"><code class="chip">get_order</code><code class="chip">get_trust_manifest</code><code class="chip">submit_feedback</code><code class="chip">cancel_checkout</code></p>
+</article>
+<article class="capability-card">
+<h3>Read the manual first</h3>
+<p>Full parameters, caveats and worked examples for every tool, or the whole catalogue as one document.</p>
+<p class="chip-row"><code class="chip">get_tool_guide</code><code class="chip">/agent/tools.json</code></p>
+</article>
 </div>
-<p class="note">Works natively in ChatGPT&#39;s in-app browser, no flag needed. In Chrome 149+ enable <code>chrome://flags/#enable-webmcp-testing</code>; the Model Context Tool Inspector extension lets you call tools by hand.</p>
-<ol class="journey">
-<li><span class="journey-step">01</span><span class="journey-label">Search</span></li>
-<li><span class="journey-step">02</span><span class="journey-label">Product truth</span></li>
-<li><span class="journey-step">03</span><span class="journey-label">Prepared checkout</span></li>
-<li><span class="journey-step">04</span><span class="journey-label">Person confirms</span></li>
-<li><span class="journey-step">05</span><span class="journey-label">Agent verifies order</span></li>
-</ol>
 </section>
 
 <section id="handoff" hidden></section>
 
-<section class="section-proof section-flat">
-<div class="section-head"><span class="kicker">02</span><h2>More than a wrapper</h2></div>
-<div class="proof-grid">
-<article class="proof-card">
-<h3>One shared purchase system</h3>
-<p>The site and the tools run the same order service and the same state machine. What an agent prepares through a tool is exactly what a person would have created by clicking through the site.</p>
-</article>
-<article class="proof-card">
-<h3>Safe retries</h3>
-<p>Every mutation carries an idempotency key, so a repeated or interrupted request cannot create a second order.</p>
-</article>
-<article class="proof-card">
-<h3>Price and source integrity</h3>
-<p>Source retailer, source price and displayed price are all disclosed on every listing, so nothing sits hidden between what the agent reads and what the person pays.</p>
-</article>
-<article class="proof-card">
-<h3>Human authority</h3>
-<p>The agent prepares everything. The irreversible step needs the browser&#39;s own single-use confirmation and cannot be taken by a tool.</p>
-</article>
-<article class="proof-card">
-<h3>Built to be measured</h3>
-<p>The store is a tracer instrumented so real agents can be run through it under sealed conditions. Results are not self-reported.</p>
-</article>
-</div>
-</section>
-
-<section class="section-roadmap section-flat">
-<div class="section-head"><span class="kicker">03</span><h2>Where this goes</h2></div>
-<p class="section-intro">None of this is built into the demo above. It is the direction, stated as direction, not as a claim about what runs today.</p>
-<div class="roadmap-grid">
-<article class="roadmap-card">
-<span class="roadmap-badge preview">Preview</span>
-<h3>The best source of product truth</h3>
-<p>Specifications, manuals, review themes and permitted YouTube transcript evidence, with citations and freshness, so a claim traces back to a real source.</p>
-<p class="roadmap-tools"><code>get_evidence_pack</code></p>
-</article>
-<article class="roadmap-card">
-<span class="roadmap-badge preview">Preview</span>
-<h3>A custom store for every request</h3>
-<p>A compact, checkout-ready shortlist built for the request in front of the agent, so it is not reading thousands of irrelevant pages. The full catalogue stays open behind it.</p>
-<p class="roadmap-tools"><code>create_custom_store</code></p>
-</article>
-<article class="roadmap-card">
-<span class="roadmap-badge preview">Preview</span>
-<h3>Search by need</h3>
-<p>Found from the human&#39;s job, constraints and intended use, not just the words that happen to be in a product title.</p>
-<p class="roadmap-tools"><code>search_by_activity</code></p>
-</article>
-<article class="roadmap-card">
-<span class="roadmap-badge roadmap">Roadmap</span>
-<h3>A universal transaction layer</h3>
-<p>One consistent way to research and transact across many merchants. The destination is an aggregation layer for agents across millions of merchants and products worldwide. That is stated as a destination, not a fact.</p>
-<p class="roadmap-tools"><code>compare_products</code><code>get_shipping_options</code></p>
-</article>
-<article class="roadmap-card">
-<span class="roadmap-badge preview">Preview</span>
-<h3>Continued assistance</h3>
-<p>Replenishment reminders and price alerts, so the relationship does not end the moment an order confirms.</p>
-<p class="roadmap-tools"><code>subscribe_replenishment_alerts</code></p>
-</article>
-</div>
-</section>
-
-<section class="section-decision section-flat">
-<div class="section-head"><span class="kicker">04</span><h2>The person keeps the final decision</h2></div>
-<p>The agent does everything reversible: it searches, prices and prepares the order down to the last detail. It cannot take the one step that spends money. That step happens on Robodepo&#39;s own page, in the person&#39;s own browser, with one deliberate action.</p>
+<section class="decision">
+<h2>You keep the final decision</h2>
+<p>The agent does everything reversible. It searches, prices and prepares the order down to the last detail.</p>
+<p>You see the item, delivery region and total, and approve once, with Touch ID or your device&#39;s own check where available, or a plain button where it isn&#39;t.</p>
+<p>No tool can submit that approval for you.</p>
 <details class="security-detail">
-<summary>Security detail</summary>
+<summary>How the approval is protected</summary>
 <section id="why-human-confirms">
 <h2>Why the person confirms on Robodepo&#39;s own page</h2>
 <h3>Experience</h3>
@@ -150,14 +101,66 @@
 </details>
 </section>
 
-<section class="section-tools section-flat">
+<section class="why-it-works">
+<h2>Why this works when other checkouts don&#39;t</h2>
+<p>Every purchase path here has already been run by real OpenAI and Anthropic agents under sealed test conditions: prices committed before each run, every order independently audited, and any run where the shown price differs from the charged price thrown out. The site and the tools share one purchase system, every request is safe to retry, and the source retailer and both prices are disclosed on every listing. Putting WebMCP in front of an API is easy. Proving the checkout works for agents is the work.</p>
+</section>
+
+<section class="roadmap">
+<h2>Where this is going</h2>
+<p class="roadmap-intro">Robodepo is being built as the mall for agents. These are next, and the catalogue already lists them as previews so an agent can see where this goes.</p>
+<ul class="roadmap-list">
+<li>
+<span class="badge preview">Preview</span>
+<div class="roadmap-body">
+<h3>The best source of product truth</h3>
+<p>Specifications, manuals, review themes and permitted YouTube transcript evidence, cited and kept fresh.</p>
+<p class="chip-row"><code class="chip">get_evidence_pack</code></p>
+</div>
+</li>
+<li>
+<span class="badge preview">Preview</span>
+<div class="roadmap-body">
+<h3>A custom store for every request</h3>
+<p>A short, checkout-ready shortlist built for the request in front of the agent, instead of thousands of irrelevant pages.</p>
+<p class="chip-row"><code class="chip">create_custom_store</code></p>
+</div>
+</li>
+<li>
+<span class="badge preview">Preview</span>
+<div class="roadmap-body">
+<h3>Search by need</h3>
+<p>Found from the job, constraints and intended use, not just the words that happen to be in a product title.</p>
+<p class="chip-row"><code class="chip">search_by_activity</code></p>
+</div>
+</li>
+<li>
+<span class="badge preview">Preview</span>
+<div class="roadmap-body">
+<h3>One way to transact across many merchants</h3>
+<p>One consistent way to research and transact across many merchants. The aim is an aggregation layer spanning millions of merchants and products; today there is one demo product.</p>
+<p class="chip-row"><code class="chip">compare_products</code><code class="chip">get_shipping_options</code></p>
+</div>
+</li>
+<li>
+<span class="badge preview">Preview</span>
+<div class="roadmap-body">
+<h3>Replenishment and price alerts</h3>
+<p>So the relationship doesn&#39;t end the moment an order confirms.</p>
+<p class="chip-row"><code class="chip">subscribe_replenishment_alerts</code></p>
+</div>
+</li>
+</ul>
+</section>
+
+<section class="section-tools">
 <details class="tool-catalogue">
 <summary>Tool catalogue (14 tools)</summary>
 <ul class="tools" id="tool-list"></ul>
 </details>
 </section>
 
-<section class="section-activity section-flat">
+<section class="section-activity">
 <details class="activity-log">
 <summary>Activity log</summary>
 <ol class="activity" id="activity"></ol>
@@ -165,8 +168,8 @@
 </section>
 
 <footer>
-<p>Robodepo is a working name. Sandbox only: no real charge, retailer order or fulfilment.</p>
-<p>Source retailer disclosed on every listing; displayed price may differ from the source. Trust manifest: <code>/trust-manifest.json</code>. Code: <a href="https://github.com/Web3Zero/robodepo-webmcp">github.com/Web3Zero/robodepo-webmcp</a></p>
+<p>Sandbox: Stripe test mode, nothing is charged, no retailer order is placed. Source retailer and both prices disclosed on every listing. Robodepo is a working name.</p>
+<p class="dev-links">Developer: <a href="/agent/tools.json">tools.json</a> &middot; <a href="/agent/story.md">The full story</a> &middot; <a href="/trust-manifest.json">trust manifest</a> &middot; <a href="https://github.com/Web3Zero/robodepo-webmcp">github.com/Web3Zero/robodepo-webmcp</a></p>
 </footer>
 </main>
 <script type="module" src="./robodepo-webmcp.js"></script>
