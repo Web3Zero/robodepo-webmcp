@@ -63,6 +63,14 @@ export const CURRENCY = "AUD";
 /** The only supported quantity in the tracer. */
 export const SUPPORTED_QUANTITY = 1;
 
+/**
+ * The published cart-creation budget, per address per hour. It mirrors the
+ * `cart.create` row of the contract's `rate-limits` table; this file cannot
+ * import server code, so the number is stated once here and every sentence
+ * that quotes it is built from this constant.
+ */
+export const CART_CREATE_LIMIT_PER_HOUR = 30;
+
 /** Deterministic standard sandbox shipping, in cents. */
 export const SANDBOX_SHIPPING_CENTS = 1200;
 
@@ -356,7 +364,9 @@ const API_ERROR_MAP = {
     code: "rate_limited",
     severity: "recoverable",
     content:
-      "A published abuse threshold was reached. Wait 60 seconds, then retry; cart creation is limited to 10 per hour per address.",
+      "A published abuse threshold was reached. Wait 60 seconds, then retry; cart creation is limited to " +
+      CART_CREATE_LIMIT_PER_HOUR +
+      " per hour per address.",
     recover: ["self"],
   },
   PRODUCT_STALE: {
@@ -576,7 +586,7 @@ export const TOOLS = Object.freeze([
       "parameters": "`line_items[0].product_id` comes from `search_catalog` or `get_product`, and `quantity` must be 1 because the tracer supports no other quantity. `shipping_address` must be the published sandbox address exactly — recipient_name \"Sandbox Buyer\", line1 \"10 Example Street\", line2 null, suburb \"Wembley Downs\", state \"WA\", postcode \"6019\", country \"AU\" — and any other address is refused here, before any request is sent, with the accepted value named in the message. `budget_ceiling_cents` is the person's stated ceiling: exceeding it does not block the checkout, it adds a `budget_exceeded` warning for the person to review. `idempotency_key` may be null, in which case the tool generates one; supplied keys must be 16 to 128 printable ASCII characters and are suffixed per step so a repeat is safe.",
       "caveats": "It returns no payment details, no Stripe object, no cookie value and no full address — only the delivery region, such as WA 6019. The checkout expires 15 minutes after it is created and cannot be confirmed after that; the run authority that owns it is a browser cookie that lives 24 hours and follows the most recent checkout, so a checkout created in one browser cannot be confirmed or read in another. Shipping is the flat A$12.00 standard sandbox rate. The order is a Stripe test-mode payment: nothing is charged, no retailer order is placed and nothing is shipped.",
       "outputs": "`resource.checkout_id` feeds `cancel_checkout` and `get_order`. `resource.confirmation_url` is the link to hand the person: Robodepo's approval page, which shows the item, variant, delivery region and total and takes one biometric touch — a fingerprint, face unlock or device passkey prompt — where the browser has one, and a plain single button where it does not. That gesture is checked by the browser and never reaches Robodepo; it adds no server-side authority, and the server still verifies the same run cookie, confirmation cookie, single-use CSRF value, server-issued single-use idempotency key, same-origin submission and five-minute session it always has. No tool can submit either page. `links[]` carries that link as `approval_page` and the plain confirmation page as `confirmation_page`, for a person who would rather use the button alone. `resource.totals` carries `items_cents`, `shipping_cents`, `total_cents`, `currency` and `formatted_total`; `resource.expires_at` is when the checkout dies; `resource.delivery_region`, `resource.source_retailer` and `resource.price_may_differ` are the disclosures to relay. `instructions.for_human` is ready-made wording to pass on and `instructions.for_agent` is your own next step. Do not open `confirmation_url` yourself and do not put it somewhere the person opens it from another app: the run cookie is `SameSite=Strict`, so a navigation that starts in a chat window or a different origin arrives without it and the page can only refuse. The person approves in the panel on the Robodepo page they already have open; the link is the fallback for when that page is in front of them and something has gone wrong with the panel.",
-      "error_recovery": "`invalid_request` names the field to fix, then call this tool again; `run_authority_missing` means this browser lost its run cookie, so call this tool again to get a new one; `checkout_expired_or_invalid_state` means the 15 minutes ran out, so call this tool again; `quote_expired` means the shipping quote went stale, so call this tool again; `out_of_stock` means the source variant went unavailable, so tell the person and call `search_catalog`; `idempotency_conflict` means the key is already bound elsewhere, so retry with a new `idempotency_key` or null; `rate_limited` means the cart budget of 10 per hour is spent, so wait 60 seconds; `price_not_fresh` means no validated snapshot exists, so retry in a minute; `payment_unavailable` cannot be retried into a success, so call `submit_feedback`; `network_error` means the step never reached the store, so call this tool again. Every error names the step that failed.",
+      "error_recovery": "`invalid_request` names the field to fix, then call this tool again; `run_authority_missing` means this browser lost its run cookie, so call this tool again to get a new one; `checkout_expired_or_invalid_state` means the 15 minutes ran out, so call this tool again; `quote_expired` means the shipping quote went stale, so call this tool again; `out_of_stock` means the source variant went unavailable, so tell the person and call `search_catalog`; `idempotency_conflict` means the key is already bound elsewhere, so retry with a new `idempotency_key` or null; `rate_limited` means the cart budget is spent, so wait 60 seconds; `price_not_fresh` means no validated snapshot exists, so retry in a minute; `payment_unavailable` cannot be retried into a success, so call `submit_feedback`; `network_error` means the step never reached the store, so call this tool again. Every error names the step that failed.",
       "examples": [
         {
           "title": "Price the one buyable order",

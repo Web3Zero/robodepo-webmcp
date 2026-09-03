@@ -1,5 +1,9 @@
 # Robodepo: WebMCP agent tools
 
+![The /agent page hero, reading "Agents can find products. They still fail at checkout."](./docs/images/hero.png)
+![The in-page approval panel: item, delivery region, total, and an Approve with fingerprint or face button](./docs/images/approval-panel.png)
+![The inline Order confirmed card: item, variant, delivery region, total and order id](./docs/images/order-confirmed.png)
+
 Robodepo is a working sandbox store built for AI shopping agents. This repository is a
 WebMCP layer over that store's existing purchase system: an agent searches the catalogue,
 prices a product and fills in the checkout through browser-registered tools, then hands the
@@ -53,7 +57,7 @@ country:        AU
 ```
 
 Any other address is refused before any request is sent. Cart creation (`create_checkout`)
-is rate limited to 10 attempts per address per hour. Nothing here is a real transaction: it
+is rate limited to 30 attempts per address per hour. Nothing here is a real transaction: it
 runs in Stripe test mode, so there is no real charge, no source-retailer order and no
 fulfilment.
 
@@ -93,9 +97,10 @@ Robodepo build and serving this page from `/agent` on that build's own origin; t
 above is the intended way to try the tools.
 
 You can still read and exercise the tool catalogue itself in Node, without a server, because
-`agent/robodepo-webmcp.js` is a plain ES module with no imports and guards every browser
-global behind a check (`typeof window !== "undefined"`), so importing it under Node only
-defines its exports and does nothing else:
+`agent/robodepo-webmcp.js` is a plain ES module with one sibling import (`./approve.js`,
+mirrored alongside it) and guards every browser global behind a check
+(`typeof window !== "undefined"`), so importing it under Node only defines its exports and
+does nothing else:
 
 ```
 node -e 'import("./agent/robodepo-webmcp.js").then(m => console.log(JSON.stringify(m.TOOL_CATALOGUE_JSON(), null, 2)))'
@@ -103,7 +108,26 @@ node -e 'import("./agent/robodepo-webmcp.js").then(m => console.log(JSON.stringi
 
 `TOOL_CATALOGUE_JSON()` returns the same twelve tool definitions (name, title,
 description, JSON Schema `inputSchema`, annotations, and a `guide`) that the live page
-registers with `document.modelContext.registerTool()`.
+registers with `document.modelContext.registerTool()`. A snapshot of the same output,
+pretty-printed, is checked in at [`agent/tools.json`](./agent/tools.json).
+
+## Run the tests
+
+```
+npm install
+npm test
+```
+
+`npm test` runs [`tests/tools.test.ts`](./tests/tools.test.ts) against the two files in
+`agent/`, nothing else. It proves the catalogue shape (twelve tools, eight operational,
+four preview), every registered description and its length limit, strict input schemas,
+annotations, the shared response envelope, `next_actions` computed from state, the whole
+`create_checkout` sequence against a recording fetch (five calls, an idempotency key,
+same-origin credentials), address refusal before any network call, how API errors map to
+messages, the preview tools, `get_tool_guide`, `response_format`, the evidence branch, the
+in-page approval path with its posted CSRF and idempotency values, and the rate-limit
+message built from the published `CART_CREATE_LIMIT_PER_HOUR` constant rather than a
+written-down number.
 
 ## The 12 tools
 

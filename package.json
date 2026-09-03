@@ -1,0 +1,14 @@
+{
+  "name": "robodepo-webmcp",
+  "version": "0.1.0",
+  "private": false,
+  "type": "module",
+  "license": "MIT",
+  "description": "WebMCP agent tools for Robodepo (working name): a browser-side tool layer over a sandbox purchase API, with the tests that prove the tool module's own behaviour.",
+  "scripts": {
+    "test": "vitest run"
+  },
+  "devDependencies": {
+    "vitest": "^4.1.11"
+  }
+}
