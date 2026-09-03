@@ -117,6 +117,37 @@ h1 {
   background: var(--accent);
 }
 
+.live-call {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 0.75rem 0 0;
+  color: var(--ink-faint);
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+  font-weight: 500;
+}
+
+.live-call::before {
+  content: "";
+  flex: none;
+  width: 0.4rem;
+  height: 0.4rem;
+  border: 1px solid var(--border-strong);
+  border-radius: 50%;
+  background: transparent;
+}
+
+.live-call.is-active {
+  color: var(--ink);
+  font-weight: 600;
+}
+
+.live-call.is-active::before {
+  border-color: var(--accent);
+  background: var(--accent);
+}
+
 .agent-note {
   max-width: 40rem;
   margin: 0.85rem 0 0;
@@ -142,9 +173,18 @@ section h2 {
 .capabilities,
 .decision,
 .why-it-works,
-.roadmap {
+.roadmap,
+.section-feedback {
   padding-top: 2.25rem;
   border-top: 1px solid var(--border);
+}
+
+.section-intro {
+  max-width: var(--content-width);
+  margin: 0 0 1.5rem;
+  color: var(--ink-faint);
+  font-size: 0.95rem;
+  line-height: 1.55;
 }
 
 /* ------------------------------- Capability cards ---------------------------- */
@@ -311,13 +351,15 @@ dl.handoff dd {
   fill: var(--accent);
 }
 
-.approval-mock .am-fp-ring {
+.approval-mock .am-fp-ring,
+.approve-fingerprint .am-fp-ring {
   fill: none;
   stroke: var(--accent);
   stroke-width: 2;
 }
 
-.approval-mock .am-fp-line {
+.approval-mock .am-fp-line,
+.approve-fingerprint .am-fp-line {
   fill: none;
   stroke: var(--accent);
   stroke-width: 2;
@@ -332,6 +374,103 @@ dl.handoff dd {
   fill: #ffffff;
   font: 600 12px var(--font-body);
   text-anchor: middle;
+}
+
+/* --------------------------- Approve and order pages -------------------------------- */
+
+.approve-main,
+.order-main {
+  margin: 0 auto;
+  max-width: 30rem;
+  padding: 0 clamp(1.1rem, 4vw, 2rem) 4rem;
+}
+
+.approve-main .eyebrow,
+.order-main .eyebrow {
+  margin-top: clamp(2rem, 5vw, 3rem);
+}
+
+.approve-main h1,
+.order-main h1 {
+  margin: 0.75rem 0 0;
+  max-width: none;
+}
+
+.approve-card,
+.order-card {
+  position: relative;
+  margin-top: 1.75rem;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: var(--paper-raised);
+  padding: 1.6rem 1.6rem 1.75rem;
+}
+
+.handoff-total {
+  font-size: 1.4rem;
+  font-weight: 700;
+  color: var(--accent);
+}
+
+.approve-fingerprint {
+  display: block;
+  width: 3.5rem;
+  height: 3.5rem;
+  margin: 1.5rem auto 0;
+}
+
+.approve-card form {
+  margin-top: 1.5rem;
+}
+
+.approve-card button {
+  width: 100%;
+  margin-top: 0;
+}
+
+.approve-footer,
+.order-footer {
+  margin-top: 2rem;
+  text-align: center;
+}
+
+.approve-footer a,
+.order-footer a {
+  font-size: 0.85rem;
+}
+
+.order-id {
+  display: inline-block;
+  border: 1px solid var(--border-strong);
+  border-radius: 5px;
+  background: var(--accent-tint);
+  padding: 0.15rem 0.5rem;
+  color: var(--accent);
+  font-family: var(--font-mono);
+  font-size: 0.82rem;
+  overflow-wrap: anywhere;
+}
+
+.order-links {
+  margin: 0;
+}
+
+.order-back-link {
+  display: inline-block;
+  margin-top: 1.5rem;
+  border: 1px solid var(--border-strong);
+  border-radius: 7px;
+  padding: 0.65rem 1.25rem;
+  color: var(--ink);
+  font-weight: 600;
+  font-size: 0.92rem;
+  text-decoration: none;
+}
+
+.order-back-link:hover {
+  border-color: var(--accent);
+  background: var(--accent-tint);
+  color: var(--accent);
 }
 
 /* --------------------------------- Why it works -------------------------------- */
@@ -546,6 +685,12 @@ ul.tools li:first-child {
   color: var(--ink-faint);
 }
 
+.badge.live {
+  border-color: var(--accent);
+  background: var(--accent-tint);
+  color: var(--accent);
+}
+
 .tool-summary {
   margin: 0.4rem 0 0;
   color: var(--ink-soft);
@@ -605,6 +750,58 @@ ul.tools li:first-child {
   font-size: 0.78rem;
   line-height: 1.55;
   white-space: pre;
+}
+
+/* ------------------------------------- Feedback form ---------------------------------------- */
+
+.feedback-form {
+  max-width: var(--content-width);
+}
+
+.field {
+  margin: 0 0 1rem;
+}
+
+.field label {
+  display: block;
+  margin: 0 0 0.4rem;
+  color: var(--ink-soft);
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.field select,
+.field textarea {
+  display: block;
+  width: 100%;
+  border: 1px solid var(--border-strong);
+  border-radius: 7px;
+  background: var(--paper-raised);
+  padding: 0.6rem 0.75rem;
+  color: var(--ink);
+  font: inherit;
+  font-size: 0.92rem;
+}
+
+.field textarea {
+  resize: vertical;
+  min-height: 4.5rem;
+  line-height: 1.5;
+}
+
+#feedback-submit {
+  margin-top: 0.25rem;
+}
+
+.feedback-result {
+  margin: 1rem 0 0;
+  color: var(--ink-soft);
+  font-size: 0.88rem;
+  line-height: 1.5;
+}
+
+.feedback-result:empty {
+  margin: 0;
 }
 
 /* ------------------------------------- Notes ---------------------------------------- */

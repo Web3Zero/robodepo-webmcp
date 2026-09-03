@@ -1,0 +1,131 @@
+{
+  "product_id": "holiday-bucket-beige-canvas-l-xl-beige",
+  "title": "Holiday Bucket - Beige Canvas",
+  "variant": "L-XL / Beige",
+  "generated_at": "2026-09-03T07:44:18Z",
+  "checked_at": "2026-09-03T07:44:18Z",
+  "disclosure": "Assembled from the sources listed; every claim cites a source id; claims with no source are omitted and listed under gaps.",
+  "sources": [
+    {
+      "id": "s1",
+      "type": "retailer_page",
+      "title": "Holiday Cotton Bucket Hat (Beige Canvas)",
+      "url": "https://lackofcolor.com.au/products/holiday-bucket-beige-canvas",
+      "publisher": "Lack of Color (AU storefront)",
+      "accessed_at": "2026-09-03T07:41:00Z",
+      "notes": "This is the contract's source retailer page. robots.txt for lackofcolor.com.au was fetched and checked first in this session: it disallows /admin, /cart, /checkout, /orders, /account, /search, /policies/, sorted/filtered collection URLs, and remote-variant product URLs matching /products/*-[8 hex chars]-remote for general crawlers; ordinary /products/{handle} URLs (including this one) are not disallowed. Page fetched twice this session: once for specifications/price/sizing, once specifically for the on-page customer review section (4.9/5 stars, 117 reviews, with visible written review snippets, not just a star widget)."
+    },
+    {
+      "id": "s2",
+      "type": "manufacturer_page",
+      "title": "Holiday Cotton Bucket Hat (Beige Canvas)",
+      "url": "https://lackofcolor.com/products/holiday-bucket-beige-canvas",
+      "publisher": "Lack of Color (US storefront, same brand)",
+      "accessed_at": "2026-09-03T07:41:30Z",
+      "notes": "Same brand's US storefront listing for the identical hat model and colourway, used to corroborate the AU retailer's specs. Shows a separate review pool (4.8/5, 132 reviews) from the AU site's (4.9/5, 117 reviews) -- these are not the same set of reviews."
+    },
+    {
+      "id": "s3",
+      "type": "guide",
+      "title": "Clean & Care Guide: Holiday Bucket Hat",
+      "url": "https://lackofcolor.com.au/pages/holiday-bucket-hat-care-guide",
+      "publisher": "Lack of Color (AU)",
+      "accessed_at": "2026-09-03T07:42:40Z",
+      "notes": "Model-specific care guide. Covers steaming/reshaping and loose-thread trimming only; explicitly does not include separate washing, drying, storage or sun-exposure instructions on this page."
+    },
+    {
+      "id": "s4",
+      "type": "manufacturer_page",
+      "title": "Sustainable Ethics & Ethical Sourcing",
+      "url": "https://lackofcolor.com/pages/ethics",
+      "publisher": "Lack of Color (US)",
+      "accessed_at": "2026-09-03T07:42:55Z",
+      "notes": "Brand-wide manufacturing and sourcing statement, not specific to this SKU or production batch."
+    },
+    {
+      "id": "s5",
+      "type": "youtube_transcript",
+      "title": "HONEST REVIEW: Lack of Color Holiday Bucket Hat",
+      "url": "https://www.youtube.com/watch?v=1OYfFiXi6is",
+      "publisher": "YouTube channel: Carmen Jia",
+      "accessed_at": "2026-09-03T07:43:20Z",
+      "notes": "Independent try-on/review video for the same Holiday Bucket Hat model in the Peach Bloom colourway (not Beige Canvas) and the L-XL size. Transcript fetched via the youtube-transcript skill (136 caption entries). Upload date was not available in the fetched transcript metadata (see gaps)."
+    }
+  ],
+  "specifications": [
+    { "field": "material", "value": "100% cotton canvas", "source_ids": ["s1", "s2"] },
+    { "field": "brim", "value": "Wide brim, approximately 11 cm / 4.33 inches", "source_ids": ["s1", "s2"] },
+    { "field": "crown", "value": "Wide-brimmed bucket-hat silhouette with an adjustable neck tie; soft, moldable and packable construction", "source_ids": ["s1", "s2"] },
+    { "field": "sizing", "value": "Offered in three sizes: S-M (55-57 cm / 21.65-22.4 in), M-L (57-59 cm / 22.4-23.2 in), L-XL (59-61 cm / 23.2-24 in). This pack covers the L-XL variant.", "source_ids": ["s1", "s2"] },
+    { "field": "sun_protection", "value": "UPF 50+, described by the retailer as blocking over 98% of UVA and UVB rays", "source_ids": ["s1", "s2"] },
+    { "field": "origin", "value": "Brand-wide statement only (not confirmed for this specific SKU): designed and finished in Australia; hand-made in factories in the USA, Mexico, China and the Dominican Republic, all BSCI-certified", "source_ids": ["s4"] },
+    { "field": "price_observed_today", "value": "AUD 99.00 on the AU retailer site; USD 99.00 list price on the US site, which also shows a 4-instalment payment-plan option of 4x $24.75", "source_ids": ["s1", "s2"] },
+    { "field": "review_volume_observed_today", "value": "AU site: 4.9/5 from 117 reviews. US site: 4.8/5 from 132 reviews. These are separate, non-identical review pools.", "source_ids": ["s1", "s2"] }
+  ],
+  "sizing": [
+    { "claim": "This evidence pack's variant (L-XL) is sized for a 59-61 cm / 23.2-24 in head circumference, the largest of the three sizes the hat is offered in.", "source_ids": ["s1", "s2"] },
+    { "claim": "The retailer describes the hat's sizing as running true to size, i.e. not needing to size up or down.", "source_ids": ["s1", "s2"] },
+    { "claim": "An independent reviewer with an above-average head circumference chose the largest available size (L-XL) specifically because typical one-size bucket hats did not fit her, and reported that it fit well.", "source_ids": ["s5"] }
+  ],
+  "care": [
+    { "claim": "Spot clean with a damp cloth and mild detergent; avoid machine washing in order to preserve the hat's shape.", "source_ids": ["s1", "s2"] },
+    { "claim": "To reshape or soften, steam the underside of the brim and then lightly steam the top (do not apply a hot iron directly to the fabric), then mould the brim by hand on a clean flat surface.", "source_ids": ["s3"] },
+    { "claim": "Loose threads can be trimmed with sharp scissors or snips without affecting the hat's structure or durability.", "source_ids": ["s3"] }
+  ],
+  "how_to_use": [
+    { "claim": "The hat has an adjustable neck tie intended to keep it secure in windy conditions; an independent reviewer confirmed this worked in practice over roughly two months of regular use.", "source_ids": ["s1", "s2", "s5"] },
+    { "claim": "The hat is designed to fold and pack flat for travel; an independent reviewer confirmed it holds its shape after being packed in a bag.", "source_ids": ["s1", "s2", "s5"] },
+    { "claim": "The wide brim is intended to increase shade coverage of the face in direct sun; an independent reviewer reported finding more shade under it during Australian summer sun.", "source_ids": ["s1", "s5"] }
+  ],
+  "review_themes": [
+    {
+      "theme": "Perceived quality and construction",
+      "summary": "Both the retailer's on-page customer reviews and an independent video reviewer describe the cotton canvas as feeling substantial rather than cheap, and describe the hat as a reliable, durable, go-to piece.",
+      "source_ids": ["s1", "s5"]
+    },
+    {
+      "theme": "Colour/shade accuracy",
+      "summary": "Some reviewers on the retailer's own product page felt the canvas colourway looked different in person than expected (leaning more khaki-toned), while also acknowledging that photography and lighting affect how the colour reads.",
+      "source_ids": ["s1"]
+    },
+    {
+      "theme": "Multi-size fit",
+      "summary": "An independent reviewer with a larger-than-average head circumference specifically valued that the hat comes in three sizes rather than one-size-fits-all, since a standard one-size bucket hat had not fit her; she chose the largest size and reported a good fit.",
+      "source_ids": ["s5"]
+    },
+    {
+      "theme": "Value versus price",
+      "summary": "The independent reviewer considered the hat well made and worth owning, but felt the full retail price was high for a bucket hat and said she would repurchase only on sale, not at full price; she also noted the brand has no physical stores to try hats on before buying.",
+      "source_ids": ["s5"]
+    },
+    {
+      "theme": "Practical design details",
+      "summary": "Reviewers across both the retailer page and the independent video praised the wind-securing neck tie, the wide brim's shade coverage, and the hat's packability; the video reviewer separately noted the beige (not white) interior lining shows sweat and makeup marks less than a white lining would.",
+      "source_ids": ["s1", "s5"]
+    }
+  ],
+  "comparisons": [],
+  "transcript_evidence": [
+    {
+      "video_title": "HONEST REVIEW: Lack of Color Holiday Bucket Hat",
+      "channel": "Carmen Jia",
+      "url": "https://www.youtube.com/watch?v=1OYfFiXi6is",
+      "published": "Not available from the fetched transcript metadata; see gaps",
+      "relevance": "Reviews the same Holiday Bucket Hat model in the Peach Bloom colourway (not Beige Canvas) at the same L-XL size, so its commentary on material, sizing, neck tie, packability, UPF rating and price transfers to this variant; colour-specific commentary does not.",
+      "summary": "The reviewer bought the hat in the largest size (L-XL) during a Black Friday sale (paid roughly AUD 96 against a stated retail of AUD 129), citing a larger-than-average head as the reason the multi-size range mattered to her. She confirmed the 100% cotton material, UPF 50+ rating and wide-brim-with-neck-tie design matching the product page, praised the heavy/quality-feeling cotton, the neck tie's usefulness in wind over about two months of regular use, the wide brim's shade coverage, easy foldability into a bag, and a beige (not white) interior lining that hides sweat and makeup marks better than white would. Her main criticism was price: she called the hat expensive for a bucket hat, noted the brand has no physical stores to try hats on, and said she would buy again only during a sale rather than at full price, though she does recommend the hat for its quality.",
+      "source_ids": ["s5"]
+    }
+  ],
+  "gaps": [
+    "No source fetched today discloses the hat's weight; no weight specification is available.",
+    "No source fetched today confirms the country of manufacture for this specific SKU/production batch. Only a brand-wide statement exists (designed and finished in Australia; hand-made across factories in the USA, Mexico, China and the Dominican Republic), which is not product- or batch-specific.",
+    "No video or written source specific to the exact Beige Canvas colourway was found; the only relevant video review found and used covers the same hat model in a different colourway (Peach Bloom).",
+    "The transcript source's original publish/upload date was not returned by the transcript fetch; it was not independently looked up, so it is omitted rather than guessed.",
+    "No comparison article specific to the Holiday Bucket Hat versus a competing bucket hat was found. A blog article surfaced in search that compares a Lack of Color hat to a cheaper 'dupe' covers the brand's wool fedora line, not the Holiday Bucket Hat, so it was not used.",
+    "lackofcolor.com.au's general 'Care' page (https://lackofcolor.com.au/pages/care) is an index of links to per-style care guides rather than a general care-instructions page itself, so claims about general wet-hat handling and storage guidance could not be independently confirmed by a direct fetch today and are omitted rather than sourced from a search-result summary."
+  ],
+  "freshness": {
+    "refresh_policy": "Rebuilt when the source page changes or after 30 days, whichever first",
+    "next_check_due": "2026-10-03T07:44:18Z"
+  }
+}

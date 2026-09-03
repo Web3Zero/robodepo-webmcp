@@ -141,30 +141,47 @@ function approvalPageHtml(view: ConfirmationView, mandateId: string): string {
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="robots" content="noindex, nofollow">
-<title>Approve sandbox purchase — Robodepo (working name)</title>
+<title>Approve this purchase — Robodepo</title>
 <link rel="stylesheet" href="/agent/agent.css">
 </head>
 <body>
-<main>
-<p class="eyebrow">Public validation sandbox</p>
-<h1>Approve sandbox purchase</h1>
+<header class="masthead">
+<div class="wordmark">Robodepo</div>
+<p class="tagline">For shopping agents, and the people they shop for.</p>
+</header>
+<main class="approve-main">
+<p class="eyebrow">Sandbox order &middot; approval</p>
+<h1>Approve this purchase</h1>
 
-<section>
+<section class="approve-card">
 <dl class="handoff">
 <dt>Item</dt><dd>${view.title}</dd>
 <dt>Variant</dt><dd>${view.variant}</dd>
 <dt>Delivery region</dt><dd>${view.deliveryRegion}</dd>
-<dt>Amount</dt><dd>${view.total}</dd>
+<dt>Amount</dt><dd class="handoff-total">${view.total}</dd>
 </dl>
+<svg class="approve-fingerprint" viewBox="0 0 60 60" aria-hidden="true" focusable="false">
+<g transform="translate(30,30)">
+<circle class="am-fp-ring" r="26"></circle>
+<path class="am-fp-line" d="M -14 -6 Q 0 -20 14 -6"></path>
+<path class="am-fp-line" d="M -16 2 Q 0 -12 16 2"></path>
+<path class="am-fp-line" d="M -12 10 Q 0 -2 12 10"></path>
+<path class="am-fp-line" d="M -8 16 Q 0 8 8 16"></path>
+</g>
+</svg>
 <form method="post" action="${view.formAction}" id="approve-form">
 <input type="hidden" name="csrf" value="${view.csrf}">
 <input type="hidden" name="idempotency_key" value="${view.idempotencyKey}">
 <button type="submit" id="approve-button">Approve with fingerprint or face</button>
 </form>
-<p id="approve-status"></p>
-<p class="note">Sandbox only. No real charge. The approval gesture is checked by your browser; Robodepo&#39;s server then verifies the same one-time confirmation it always has.</p>
-<p class="note"><a href="${plainConfirmationPath}">Use the plain confirmation page instead</a></p>
 </section>
+
+<p class="note">Nothing is charged. Robodepo&#39;s server verifies the same one-time confirmation it always has.</p>
+<p id="approve-status"></p>
+
+<footer class="approve-footer">
+<a href="${plainConfirmationPath}">Use the store&#39;s plain confirmation page instead</a>
+</footer>
 </main>
 <script type="module" src="${APPROVAL_SCRIPT_PATH}"></script>
 </body>

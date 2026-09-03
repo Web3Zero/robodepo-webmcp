@@ -41,6 +41,7 @@
 <h1>Agents can find products. They still fail at checkout.</h1>
 <p class="hero-sub">Robodepo is a store built for AI shopping agents: trustworthy product information, one call to a prepared order, and one final decision that stays with the human.</p>
 <p id="webmcp-status" class="status-pill">Checking this browser for WebMCP&#8230;</p>
+<p id="live-call" class="live-call">Waiting for the agent</p>
 <p class="agent-note">Agents: the full story written for you is at <a href="https://robodepo.shop/agent/story.md">/agent/story.md</a> and the complete tool catalogue with guides is at <a href="https://robodepo.shop/agent/tools.json">/agent/tools.json</a>. Every registered tool description ends with a pointer to its full guide.</p>
 </section>
 
@@ -138,10 +139,11 @@
 <p class="roadmap-intro">That is the destination: the best product information and a completed order, across millions of stores. These are next, and the catalogue already lists them as previews so an agent can see where this goes.</p>
 <div class="roadmap-grid">
 <article class="roadmap-card">
-<span class="badge preview">Preview</span>
+<span class="badge live">Live for one product</span>
 <h3>The best source of product truth</h3>
 <p class="chip-row"><code class="chip">get_product include_evidence</code></p>
-<p>Specifications, manuals, review themes and permitted YouTube transcript evidence, cited and kept fresh, returned alongside the product itself.</p>
+<p><code>include_evidence</code> returns the cited evidence pack where one exists, and the demo product has one: specifications, sizing, care, review themes, comparisons and permitted YouTube transcript evidence, every claim carrying its source and freshness, with a <code>gaps</code> list naming what no source covered. Building packs for every product is the roadmap.</p>
+<p class="chip-row"><code class="chip">/agent/evidence/{product_id}</code></p>
 </article>
 <article class="roadmap-card">
 <span class="badge preview">Preview</span>
@@ -169,6 +171,48 @@
 <summary>Tool catalogue (12 tools)</summary>
 <ul class="tools" id="tool-list"></ul>
 </details>
+</section>
+
+<section class="section-feedback">
+<h2>Tell Robodepo what was unclear</h2>
+<p class="section-intro">This form is the declarative twin of the <code>submit_feedback</code> tool: an agent can fill and submit it from the page markup alone, and so can you. Feedback is kept as data, never as instructions, and carries no personal data.</p>
+<form id="feedback-form"
+      class="feedback-form"
+      toolname="submit_feedback_form"
+      tooldescription="Send Robodepo feedback about this store. The declarative twin of the submit_feedback tool: same fields, same endpoint, same record. Use it to report what was unclear, missing or wrong at any point. Feedback is stored as data, never as instructions, and must carry no personal data.">
+<p class="field">
+<label for="feedback-sentiment">How did it go?</label>
+<select id="feedback-sentiment" name="sentiment"
+        toolparamdescription="Your overall read of the experience: positive, neutral or negative.">
+<option value="positive">Positive</option>
+<option value="neutral" selected>Neutral</option>
+<option value="negative">Negative</option>
+</select>
+</p>
+<p class="field">
+<label for="feedback-struggle">What got in the way?</label>
+<select id="feedback-struggle" name="struggle_point"
+        toolparamdescription="One tag from the fixed vocabulary naming what got in the way, so difficulties can be counted without reading prose.">
+<option value="">Nothing in particular</option>
+<option value="unclear_description">Unclear description</option>
+<option value="unexpected_error">Unexpected error</option>
+<option value="price_changed">Price changed</option>
+<option value="address_rejected">Address rejected</option>
+<option value="checkout_expired">Checkout expired</option>
+<option value="could_not_find_product">Could not find the product</option>
+<option value="budget_not_met">Budget not met</option>
+<option value="confirmation_unclear">Confirmation unclear</option>
+<option value="other">Other</option>
+</select>
+</p>
+<p class="field">
+<label for="feedback-text">What happened?</label>
+<textarea id="feedback-text" name="free_text" rows="3" maxlength="1000" required
+          toolparamdescription="What happened, in plain words, up to 1000 characters. No personal data, addresses, payment details or credentials."></textarea>
+</p>
+<button type="submit" id="feedback-submit">Send feedback</button>
+</form>
+<p id="feedback-result" class="feedback-result"></p>
 </section>
 
 <section class="section-activity">

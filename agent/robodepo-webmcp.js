@@ -33,7 +33,16 @@
  *
  * Node/vitest safe: every browser global is reached through a small guarded
  * function, and registration only runs when `window` exists.
+ *
+ * The one import is a sibling module in this same folder, so the pair still
+ * mirrors verbatim and still needs no build step: the biometric ceremony is
+ * security-adjacent and is written once, in `approve.js`, rather than twice.
  */
+
+import {
+  platformAuthenticatorAvailable,
+  requestApprovalGesture,
+} from "./approve.js";
 
 /* ------------------------------------------------------------------------ *
  * Frozen facts. Every value here is published by the Robodepo v1 contract
@@ -189,6 +198,39 @@ export function approvalUrlFor(confirmationUrl, mandateId, origin) {
 /** The operational tool a preview's own catalogue entry sends callers to. */
 export function previewRecovery(name) {
   return TOOLS.find((tool) => tool.name === name)?.recover ?? null;
+}
+
+/**
+ * Read the two single-use values out of the store's confirmation page.
+ *
+ * Fail-closed on every axis: no form, an action that is not this mandate's
+ * confirmation route, or a value outside the base64url alphabet the server
+ * mints, and this returns null rather than posting something it did not
+ * understand. Nothing here is trusted from the caller — the expected action is
+ * built from the mandate id the page session already holds.
+ */
+export function readConfirmationForm(parsedDocument, mandateId) {
+  if (!parsedDocument || typeof parsedDocument.querySelector !== "function") {
+    return null;
+  }
+  const form = parsedDocument.querySelector("form");
+  if (!form || typeof form.querySelector !== "function") {
+    return null;
+  }
+  const action = form.getAttribute ? (form.getAttribute("action") ?? "") : "";
+  if (action !== `/api/v1/mandates/${mandateId}/confirm`) {
+    return null;
+  }
+  const valueOf = (name) => {
+    const field = form.querySelector(`input[name="${name}"]`);
+    return field && field.getAttribute ? (field.getAttribute("value") ?? "") : "";
+  };
+  const csrf = valueOf("csrf");
+  const idempotencyKey = valueOf("idempotency_key");
+  if (!/^[A-Za-z0-9_-]{1,200}$/.test(csrf) || !/^[A-Za-z0-9_-]{1,200}$/.test(idempotencyKey)) {
+    return null;
+  }
+  return { action, csrf, idempotencyKey };
 }
 
 function isPrintableAscii(value) {
@@ -469,14 +511,14 @@ export const TOOLS = Object.freeze([
     name: "get_product",
     title: "Read one product record",
     kind: "operational",
-    description: "Returns one product's published record: title, variant, availability, the source retailer's price and Robodepo's displayed price, both in AUD integer cents. Use when you hold a product_id and want the full record and price disclosure. Not for browsing the catalogue; use search_catalog. include_evidence is a roadmap field and is ignored today. Full guide: get_tool_guide or /agent/tools.json#get_product",
+    description: "Returns one product's published record: title, variant, availability, the source retailer's price and Robodepo's displayed price, both in AUD integer cents. Use when you hold a product_id and want the full record and price disclosure. Not for browsing the catalogue; use search_catalog. include_evidence returns the cited evidence pack where one exists. Full guide: get_tool_guide or /agent/tools.json#get_product",
     guide: {
       "summary": "Returns every published field for one product: title, variant, availability, the source retailer's price and Robodepo's displayed price, both as AUD integer cents, plus a formatted price string such as A$113.85 and the source disclosure.",
       "use_when": "Use this when you hold a `product_id` from `search_catalog` and want the full record, including the price disclosure, before pricing a checkout.",
-      "do_not_use": "Do not use this for browsing the whole catalogue; use `search_catalog` instead. There is no separate tool to fetch evidence: evidence is not a second call, it belongs on the product, so the roadmap attaches it here through `include_evidence` rather than anywhere else.",
-      "parameters": "`product_id` comes from `search_catalog`. The demo catalogue's only product id is `holiday-bucket-beige-canvas-l-xl-beige`, and any other id is refused rather than guessed at. `response_format` chooses how much of the source disclosure comes back: `concise` for the retailer's name and the price-may-differ flag, `detailed` for the whole `source` block. `include_evidence` is a roadmap field: when it is built, passing `true` will attach the evidence pack — specifications, manuals, review themes and permitted YouTube transcript evidence, each cited and carrying its freshness. It is not available in this demo; today it is ignored, and passing `true` adds an `evidence_not_available` message saying so rather than quietly returning a product with no evidence on it.",
+      "do_not_use": "Do not use this for browsing the whole catalogue; use `search_catalog` instead. There is no separate tool to fetch evidence: evidence is not a second call, it belongs on the product, so it is attached here through `include_evidence` rather than anywhere else.",
+      "parameters": "`product_id` comes from `search_catalog`. The demo catalogue's only product id is `holiday-bucket-beige-canvas-l-xl-beige`, and any other id is refused rather than guessed at. `response_format` chooses how much of the source disclosure comes back: `concise` for the retailer's name and the price-may-differ flag, `detailed` for the whole `source` block. `include_evidence` returns the cited evidence pack where one exists, and the demo product has one: specifications, sizing, care, how-to-use notes, review themes, comparisons and permitted YouTube transcript evidence, every claim carrying its source and freshness, plus a `gaps[]` list naming what no source covered. Building packs for every product is the roadmap; today exactly one product has one, and asking for evidence on any other returns the ordinary record with an `evidence_not_available` message rather than an invented pack.",
       "caveats": "It returns no shipping cost, no delivery estimate and no stock count. It reads a stored snapshot, holds no handle and places no reservation, so the price it shows can still move before you create a checkout.",
-      "outputs": "`resource.product_id` feeds `create_checkout` as `line_items[0].product_id`. `resource.source_price_cents` and `resource.display_price_cents` are both returned: the displayed price sits above the source retailer's price, and Robodepo publishes both rather than hiding the difference. Under `detailed`, `resource.source.retailer`, `resource.source.url` and `resource.source.last_checked_at` say where the item comes from and when it was last read, and `resource.source.price_may_differ` warns that the retailer's own price can move; under `concise` that block is replaced by `resource.source_retailer` and `resource.price_may_differ`, so the disclosure is shortened but never dropped. No `resource.evidence` is returned by any version of this tool today; `include_evidence: true` returns the ordinary record plus the `evidence_not_available` message.",
+      "outputs": "`resource.product_id` feeds `create_checkout` as `line_items[0].product_id`. `resource.source_price_cents` and `resource.display_price_cents` are both returned: the displayed price sits above the source retailer's price, and Robodepo publishes both rather than hiding the difference. Under `detailed`, `resource.source.retailer`, `resource.source.url` and `resource.source.last_checked_at` say where the item comes from and when it was last read, and `resource.source.price_may_differ` warns that the retailer's own price can move; under `concise` that block is replaced by `resource.source_retailer` and `resource.price_may_differ`, so the disclosure is shortened but never dropped. `include_evidence: true` adds `resource.evidence` — the whole pack, including its own `disclosure`, `sources[]`, `gaps[]` and `freshness` — and an `evidence_attached` message naming how many sources it holds and when they were last checked. Where no pack exists the record comes back unchanged with an `evidence_not_available` message instead, so an empty section is never mistaken for a negative answer.",
       "error_recovery": "`product_not_found` means that id is not in this catalogue, so call `search_catalog`; `out_of_stock` means the source variant is unavailable, so call `search_catalog` and tell the person; `price_not_fresh` means no validated snapshot exists, so retry in a minute; `rate_limited` means the public-read budget is spent, so wait 60 seconds; `network_error` means the request never left the browser, so call this tool again.",
       "examples": [
         {
@@ -511,7 +553,7 @@ export const TOOLS = Object.freeze([
             "boolean",
             "null"
           ],
-          "description": "Roadmap: when true, a cited, dated evidence pack will be attached. Not available in this demo; today it is ignored and a message says so."
+          "description": "When true, attaches the cited evidence pack if the product has one. The demo product does; packs for every product are the roadmap."
         }
       },
       "required": [
@@ -738,7 +780,7 @@ export const TOOLS = Object.freeze([
       "do_not_use": "Do not use this for confirming the order; no tool can, the person does that themselves, and to price something use `create_checkout` instead.",
       "parameters": "Supply at least one of `order_id` or `checkout_id`; both may not be null. `order_id` comes from the order page the person lands on after confirming, at `/orders/{order_id}`. `checkout_id` comes from `create_checkout`, and when you pass it this tool checks whether the window this page opened has reached an order page — either the approval page or the plain confirmation page redirects there — so you can poll politely while the person decides.",
       "caveats": "It returns no payment details, no Stripe object and no full address — the delivery region, such as WA 6019, is the most it gives. An order can only be read from the browser whose run created it. If the person has not confirmed yet, this is not an error: you get `status: \"awaiting_human_confirmation\"` and the confirmation link to hand them again.",
-      "outputs": "`resource.order_id`, `resource.status`, `resource.item` (product_id, title, variant, quantity, unit_price_cents), `resource.shipping_cents`, `resource.total_cents` with `formatted_total`, `resource.delivery_region` and `resource.created_at`. `links[]` carries the human-readable `order_page`. `instructions.for_human` is wording you can read out.",
+      "outputs": "`resource.order_id`, `resource.status`, `resource.item` (product_id, title, variant, quantity, unit_price_cents), `resource.shipping_cents`, `resource.total_cents` with `formatted_total`, `resource.delivery_region` and `resource.created_at`. `links[]` carries `order_page`, Robodepo's readable order page, and `order_record`, the store's own record of the same order. `instructions.for_human` is wording you can read out.",
       "error_recovery": "`not_found` means no order with that id exists in this browser's run, and because an order is readable only from the browser whose run created it, creating another checkout will not surface it — report it with `submit_feedback` if the person did confirm, then start again from `search_catalog`; `run_authority_missing` means this browser lost the run authority that owns the order, and a new checkout issues a new run rather than recovering the old one, so no retry reaches it and `submit_feedback` is the honest next step; `rate_limited` means the run read budget is spent, so wait 60 seconds and call this tool again; `network_error` means the request never reached the store, so call this tool again.",
       "examples": [
         {
@@ -1367,6 +1409,33 @@ function defaultRandomUuid() {
   });
 }
 
+/** The store's confirmation page, parsed by the browser's own parser. */
+function defaultParseDocument(html) {
+  if (typeof DOMParser === "undefined") {
+    return null;
+  }
+  return new DOMParser().parseFromString(html, "text/html");
+}
+
+/**
+ * The same user-presence ceremony `/approve/{id}` runs, reached through the
+ * shared functions rather than a second copy of them.
+ */
+const defaultGesture = {
+  async available() {
+    if (typeof window === "undefined") {
+      return false;
+    }
+    return platformAuthenticatorAvailable(window);
+  },
+  async request() {
+    if (typeof window === "undefined") {
+      throw new Error("no window");
+    }
+    return requestApprovalGesture(window.navigator, window.location.hostname);
+  },
+};
+
 function defaultOpenWindow(url, name) {
   if (typeof window === "undefined" || typeof window.open !== "function") {
     return null;
@@ -1390,6 +1459,10 @@ export function createRobodepoTools(options = {}) {
     now: options.now ?? (() => new Date()),
     randomUUID: options.randomUUID ?? defaultRandomUuid,
     openWindow: options.openWindow ?? defaultOpenWindow,
+    // Injectable so the parse-and-post path is testable under Node; the
+    // browser always gets DOMParser.
+    parseDocument: options.parseDocument ?? defaultParseDocument,
+    gesture: options.gesture ?? defaultGesture,
   };
 
   const session = {
@@ -1492,7 +1565,7 @@ export function createRobodepoTools(options = {}) {
       tool: null,
       action: "open_confirmation_page",
       url: checkout.confirmation_url,
-      why: "The person approves here, with a fingerprint or face touch where the device has one and a plain button where it does not. This is the only irreversible step and the agent must not submit it.",
+      why: "The person approves on the Robodepo page itself, in one touch; this link is the standalone fallback for a reply that cannot show the page. This is the only irreversible step and the agent must not take it.",
     };
   }
 
@@ -1761,18 +1834,38 @@ export function createRobodepoTools(options = {}) {
         "Both prices are published: the displayed price sits above the source retailer's, and the retailer's own price can move.",
       ),
     ];
+    let evidence = null;
     if (input?.include_evidence === true) {
-      // Asked for something the roadmap describes and this demo does not have.
-      // Saying so is the whole reason the field exists before it is built.
-      productMessages.push(
-        message(
-          "info",
-          "evidence_not_available",
-          "recoverable",
-          "$.include_evidence",
-          "Evidence packs are not built. This record carries no specifications, manuals, review themes or cited transcript evidence, and the field was ignored.",
-        ),
+      const pack = await requestJson(
+        "GET",
+        `/agent/evidence/${encodeURIComponent(productId)}`,
       );
+      if (pack.ok && pack.data) {
+        evidence = pack.data;
+        const sourceCount = Array.isArray(evidence.sources) ? evidence.sources.length : 0;
+        const checkedAt = evidence.checked_at ?? "an unrecorded time";
+        productMessages.push(
+          message(
+            "info",
+            "evidence_attached",
+            "recoverable",
+            "$.resource.evidence",
+            `Evidence pack attached: ${sourceCount} cited ${sourceCount === 1 ? "source" : "sources"}, last checked ${checkedAt}. An empty section means no source was found, not that the answer is no; resource.evidence.gaps names what is missing.`,
+          ),
+        );
+      } else {
+        // No pack for this product. Say so rather than return a record that
+        // looks as though the evidence was considered and came back empty.
+        productMessages.push(
+          message(
+            "info",
+            "evidence_not_available",
+            "recoverable",
+            "$.include_evidence",
+            "No evidence pack is published for this product, so none is attached. Building packs for every product is the roadmap; the demo product has one.",
+          ),
+        );
+      }
     }
     return buildEnvelope({
       status: "ok",
@@ -1783,6 +1876,7 @@ export function createRobodepoTools(options = {}) {
         formatted_price: formatAud(product.display_price_cents),
         formatted_source_price: formatAud(product.source_price_cents),
         transaction_mode: "sandbox",
+        ...(evidence ? { evidence } : {}),
       },
       messages: productMessages,
       next_actions: computeNextActions(["create_checkout", "search_catalog"], "get_product"),
@@ -1988,8 +2082,10 @@ export function createRobodepoTools(options = {}) {
         trustManifestLink(),
       ],
       instructions: {
-        for_human: "Open the approval page and approve to place a sandbox order; nothing is charged.",
-        for_agent: "Hand over confirmation_url, then call get_order once they approve.",
+        for_human:
+          "Look at the item, delivery region and total on the Robodepo page and approve with one touch. Nothing is charged.",
+        for_agent:
+          "Tell the human to approve on the Robodepo page (one touch). Do not attempt to approve. After they approve, call get_order with the checkout_id.",
       },
     });
   }
@@ -2090,9 +2186,15 @@ export function createRobodepoTools(options = {}) {
       if (typeof pathname !== "string") {
         return null;
       }
+      // Either readback counts: the store's own record at `/orders/<id>`, or
+      // Robodepo's styled one at `/agent/order/<id>`. The approval page can
+      // land on either, so a poll must recognise both.
       const parts = pathname.split("/").filter((part) => part.length > 0);
       if (parts.length === 2 && parts[0] === "orders") {
         return parts[1];
+      }
+      if (parts.length === 3 && parts[0] === "agent" && parts[1] === "order") {
+        return parts[2];
       }
       return null;
     } catch {
@@ -2215,7 +2317,14 @@ export function createRobodepoTools(options = {}) {
       ],
       next_actions: computeNextActions(null, "get_order"),
       links: [
-        { type: "order_page", url: `${deps.origin}/orders/${order.order_id ?? orderId}` },
+        {
+          type: "order_page",
+          url: `${deps.origin}/agent/order/${encodeURIComponent(order.order_id ?? orderId)}`,
+        },
+        {
+          type: "order_record",
+          url: `${deps.origin}/orders/${encodeURIComponent(order.order_id ?? orderId)}`,
+        },
         trustManifestLink(),
       ],
       instructions: {
@@ -2488,6 +2597,195 @@ export function createRobodepoTools(options = {}) {
   }
 
   /**
+   * Approve a prepared checkout from this page, in one click.
+   *
+   * This is NOT a tool and must never become one. It is not in `TOOLS`, it is
+   * not registered with the model context, and `call()` cannot reach it. A
+   * tool that could do this would be the agent taking the irreversible step,
+   * which is the one thing the whole design refuses. It exists so a *person*
+   * looking at the handoff panel can approve without leaving the page they are
+   * already reading the item and the total on.
+   *
+   * Nothing new is granted. Every check the store makes still runs, in the
+   * store, unchanged: the run cookie, the confirmation cookie this call
+   * causes to be issued, the single-use CSRF value, the server-issued
+   * single-use idempotency key, and the same-origin requirement — a
+   * same-origin `fetch` POST is sent with `Origin` and `Sec-Fetch-Site` by the
+   * browser, and neither is settable from script. The click simply moved.
+   */
+  async function approveCheckout(checkoutId) {
+    const record = checkoutId ? (session.checkouts.get(checkoutId) ?? null) : currentCheckout();
+    if (!record || !record.checkout_id) {
+      return buildEnvelope({
+        status: "error",
+        resource: { type: "checkout", checkout_id: checkoutId ?? null },
+        messages: [
+          message(
+            "error",
+            "not_found",
+            "recoverable",
+            "$.checkout_id",
+            "This page did not prepare that checkout, so there is nothing to approve.",
+          ),
+        ],
+        next_actions: computeNextActions(["create_checkout"], "get_order"),
+        links: [trustManifestLink()],
+        instructions: { for_human: null, for_agent: null },
+      });
+    }
+
+    const mandateId = record.checkout_id;
+
+    const failure = (code, content) =>
+      buildEnvelope({
+        status: "error",
+        resource: { type: "checkout", checkout_id: mandateId },
+        messages: [message("error", code, "requires_buyer_review", null, content)],
+        next_actions: computeNextActions(null, "get_order"),
+        links: record.confirmation_url
+          ? [{ type: "approval_page", url: record.confirmation_url }, trustManifestLink()]
+          : [trustManifestLink()],
+        instructions: {
+          for_human: "Nothing was ordered and nothing was charged.",
+          for_agent: "Offer the approval page instead; do not approve on the person's behalf.",
+        },
+      });
+
+    // 1. Ask the store for the confirmation page. This is what issues the
+    //    confirmation cookie and mints the single-use values.
+    let page;
+    try {
+      page = await deps.fetch(`${deps.origin}/confirm/${encodeURIComponent(mandateId)}`, {
+        method: "GET",
+        credentials: "same-origin",
+        headers: { Accept: "text/html" },
+      });
+    } catch {
+      return failure(
+        "network_error",
+        "Robodepo could not be reached, so nothing was approved. Check the connection and try again.",
+      );
+    }
+    if (!page || !page.ok) {
+      return failure(
+        "confirmation_unavailable",
+        "Robodepo would not open this checkout for approval. It may have expired — a checkout lives 15 minutes — or it may belong to another browser. Prepare a new one.",
+      );
+    }
+
+    // 2. Read the two single-use values. Fail closed rather than post a form
+    //    this page did not fully understand.
+    const form = readConfirmationForm(deps.parseDocument(await page.text()), mandateId);
+    if (!form) {
+      return failure(
+        "confirmation_unreadable",
+        "Robodepo's confirmation page was not the shape this page knows, so nothing was submitted. Use the approval page instead.",
+      );
+    }
+
+    // 3. The user-presence gesture, where the device has one. It grants no
+    //    server-side authority and the server never learns whether it ran.
+    let hadGesture = false;
+    try {
+      if (await deps.gesture.available()) {
+        await deps.gesture.request();
+        hadGesture = true;
+      }
+    } catch {
+      return failure(
+        "approval_gesture_incomplete",
+        "The approval gesture was not completed, so nothing was ordered. Press approve again, or use the approval page.",
+      );
+    }
+
+    // 4. Post the confirmation. The body is the store's own two values.
+    let posted;
+    try {
+      posted = await deps.fetch(`${deps.origin}${form.action}`, {
+        method: "POST",
+        credentials: "same-origin",
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        body: new URLSearchParams({
+          csrf: form.csrf,
+          idempotency_key: form.idempotencyKey,
+        }).toString(),
+      });
+    } catch {
+      return failure(
+        "network_error",
+        "The confirmation did not reach Robodepo, so nothing was ordered. Try again, or use the approval page.",
+      );
+    }
+    if (!posted || !posted.ok) {
+      return failure(
+        "confirmation_rejected",
+        "Robodepo did not accept the confirmation, so nothing was ordered. Use the approval page, which mints a fresh one-time confirmation.",
+      );
+    }
+
+    const match = /\/orders\/([^/?#]+)$/.exec(String(posted.url ?? ""));
+    if (!match) {
+      return failure(
+        "order_unreadable",
+        "The order was submitted but Robodepo could not read back which order it created. Open the approval page or call get_order to check before trying again.",
+      );
+    }
+    const orderId = match[1];
+
+    // 5. Read the order the way get_order does, so the panel shows the store's
+    //    own record rather than anything this page inferred.
+    const read = await requestJson("GET", `/api/v1/orders/${encodeURIComponent(orderId)}`);
+    record.order_id = orderId;
+    record.status = "completed";
+    if (!read.ok) {
+      notifyActivity({ at: nowIso(), tool: "approve_in_page", status: "completed" });
+      return failure(
+        "order_read_failed",
+        `The order was placed as ${orderId}, but reading it back failed. Call get_order with that id, or open the order page.`,
+      );
+    }
+
+    const order = read.data ?? {};
+    notifyActivity({ at: nowIso(), tool: "approve_in_page", status: "completed" });
+
+    return buildEnvelope({
+      status: "completed",
+      resource: {
+        type: "order",
+        ...order,
+        formatted_total: formatAud(order.total_cents),
+        transaction_mode: "sandbox",
+        approved_with_gesture: hadGesture,
+      },
+      messages: [
+        message(
+          "info",
+          "sandbox_order",
+          "recoverable",
+          null,
+          "Sandbox order, Stripe test payment. No money moved, no retailer order, nothing ships.",
+        ),
+      ],
+      next_actions: computeNextActions(null, "get_order"),
+      links: [
+        {
+          type: "order_page",
+          url: `${deps.origin}/agent/order/${encodeURIComponent(order.order_id ?? orderId)}`,
+        },
+        {
+          type: "order_record",
+          url: `${deps.origin}/orders/${encodeURIComponent(order.order_id ?? orderId)}`,
+        },
+        trustManifestLink(),
+      ],
+      instructions: {
+        for_human: "Approved. Nothing was charged.",
+        for_agent: "The person approved. Read the order back with get_order.",
+      },
+    });
+  }
+
+  /**
    * Register every tool with the browser's model context.
    *
    * Chrome 152 exposes `document.modelContext.registerTool(descriptor, {signal})`
@@ -2566,6 +2864,9 @@ export function createRobodepoTools(options = {}) {
     onActivity,
     getCheckout,
     openConfirmation,
+    // Page-only, never registered: see approveCheckout's own note.
+    approveCheckout,
+    approvalGestureAvailable: () => deps.gesture.available(),
   };
 }
 
@@ -2576,6 +2877,21 @@ export function createRobodepoTools(options = {}) {
  * ------------------------------------------------------------------------ */
 
 const ACTIVITY_LIMIT = 50;
+
+/** The approve button's two labels: promise a fingerprint only where there is one. */
+export const APPROVE_GESTURE_LABEL = "Approve with fingerprint or face";
+export const APPROVE_PLAIN_LABEL = "Approve this sandbox purchase";
+
+/** Marks the live-call strip active, where the element supports it. */
+function setLive(node, active) {
+  if (node && node.classList && typeof node.classList.toggle === "function") {
+    node.classList.toggle("is-active", active);
+  }
+}
+
+/** The live-call strip when nothing has happened for a while. */
+export const IDLE_LABEL = "Waiting for the agent";
+const IDLE_AFTER_MS = 30_000;
 
 /** Marks where the working tools end and the roadmap ones begin. */
 export const PREVIEW_DIVIDER_LABEL = "Preview tools: roadmap only, not for real use";
@@ -2643,6 +2959,10 @@ export function mountAgentPage(tools, doc, registration) {
   }
 
   wireCopyPromptButton(doc);
+  wireFeedbackForm(doc);
+
+  const liveCallNode = doc.getElementById("live-call");
+  const activityDisclosure = activityNode.closest ? activityNode.closest("details") : null;
 
   const catalogue = tools.list();
 
@@ -2693,9 +3013,31 @@ export function mountAgentPage(tools, doc, registration) {
   }
 
   const entries = [];
+  let idleHandle = null;
+  const startedAt = Date.now();
   tools.onActivity((entry) => {
     entries.unshift(entry);
     entries.length = Math.min(entries.length, ACTIVITY_LIMIT);
+
+    // The log opens itself the first time an agent does anything, so a person
+    // watching does not have to know to expand it.
+    if (activityDisclosure && entries.length === 1) {
+      activityDisclosure.open = true;
+    }
+    if (liveCallNode) {
+      const elapsed = Math.max(0, Math.round((Date.now() - startedAt) / 1000));
+      liveCallNode.textContent = `${entry.tool} → ${entry.status} · ${elapsed}s`;
+      // Live while something has happened inside the idle window; the class
+      // goes away with the text, so the styling can never outlast the fact.
+      setLive(liveCallNode, true);
+      if (idleHandle) {
+        clearTimeout(idleHandle);
+      }
+      idleHandle = setTimeout(() => {
+        liveCallNode.textContent = IDLE_LABEL;
+        setLive(liveCallNode, false);
+      }, IDLE_AFTER_MS);
+    }
     activityNode.replaceChildren(
       ...entries.map((logged) => {
         const row = doc.createElement("li");
@@ -2710,6 +3052,20 @@ export function mountAgentPage(tools, doc, registration) {
     }
   });
 
+  /** A definition list of label/value rows, the panel's one layout. */
+  function detailList(rows) {
+    const list = doc.createElement("dl");
+    list.className = "handoff";
+    for (const [label, value] of rows) {
+      const term = doc.createElement("dt");
+      term.textContent = label;
+      const detail = doc.createElement("dd");
+      detail.textContent = value;
+      list.append(term, detail);
+    }
+    return list;
+  }
+
   function renderHandoff(checkout) {
     handoffNode.replaceChildren();
 
@@ -2720,38 +3076,213 @@ export function mountAgentPage(tools, doc, registration) {
     const heading = doc.createElement("h2");
     heading.textContent = "One decision left, and it isn't the agent's";
 
-    const list = doc.createElement("dl");
-    list.className = "handoff";
-    const rows = [
+    const list = detailList([
       ["Item", `${checkout.title} — ${checkout.variant}`],
       ["Delivery region", checkout.delivery_region ?? "unknown"],
       ["Total", formatAud(checkout.total_cents) ?? "unpriced"],
       ["Expires at", checkout.expires_at ?? "unknown"],
-    ];
-    for (const [label, value] of rows) {
-      const term = doc.createElement("dt");
-      term.textContent = label;
-      const detail = doc.createElement("dd");
-      detail.textContent = value;
-      list.append(term, detail);
-    }
+    ]);
 
     const button = doc.createElement("button");
     button.type = "button";
     button.className = "handoff-button";
-    button.textContent = "Open approval page";
-    button.addEventListener("click", () => {
-      tools.openConfirmation(checkout.checkout_id);
-    });
+    button.id = "handoff-approve";
+    button.textContent = APPROVE_PLAIN_LABEL;
+
+    const status = doc.createElement("p");
+    status.className = "handoff-status";
+    status.id = "handoff-status";
+    status.textContent = "";
 
     const note = doc.createElement("p");
     note.className = "note";
     note.textContent =
       "The human approves on Robodepo's own page. No tool can do it for them.";
 
-    handoffNode.append(kicker, heading, list, button, note);
+    // The standalone page stays one click away: a reply that cannot show this
+    // panel — ChatGPT's, for one — hands the person that link instead.
+    const fallback = doc.createElement("p");
+    fallback.className = "handoff-secondary";
+    const fallbackLink = doc.createElement("a");
+    fallbackLink.href = checkout.confirmation_url ?? "#";
+    fallbackLink.textContent = "Open approval page";
+    fallback.append(fallbackLink);
+
+    button.addEventListener("click", () => {
+      if (button.disabled) {
+        return;
+      }
+      button.disabled = true;
+      status.textContent = "Approving…";
+      tools
+        .approveCheckout(checkout.checkout_id)
+        .then((envelope) => {
+          if (envelope.status === "completed") {
+            renderConfirmedOrder(envelope);
+            return;
+          }
+          // Never a bare failure: say what happened and leave both the button
+          // and the standalone page available.
+          status.textContent =
+            envelope.messages?.[0]?.content ??
+            "Robodepo could not complete that. Nothing was ordered.";
+          button.disabled = false;
+        })
+        .catch(() => {
+          status.textContent =
+            "Something went wrong in this page before Robodepo was asked. Nothing was ordered; try again or use the approval page.";
+          button.disabled = false;
+        });
+    });
+
+    handoffNode.append(kicker, heading, list, button, status, note, fallback);
+    handoffNode.hidden = false;
+
+    // The panel is the thing to look at now, so bring it into view and put the
+    // keyboard on its button. Neither needs a user gesture.
+    if (typeof handoffNode.scrollIntoView === "function") {
+      handoffNode.scrollIntoView({ behavior: "smooth", block: "center" });
+    }
+    if (typeof button.focus === "function") {
+      button.focus();
+    }
+
+    // Label follows the device: a fingerprint prompt is only promised where
+    // the browser actually has one.
+    Promise.resolve(tools.approvalGestureAvailable())
+      .then((available) => {
+        button.textContent = available ? APPROVE_GESTURE_LABEL : APPROVE_PLAIN_LABEL;
+      })
+      .catch(() => undefined);
+  }
+
+  /** The order, in the same panel the person was just looking at. */
+  function renderConfirmedOrder(envelope) {
+    const order = envelope.resource ?? {};
+    const item = order.item ?? {};
+    handoffNode.replaceChildren();
+
+    const kicker = doc.createElement("p");
+    kicker.className = "eyebrow";
+    kicker.textContent = "Sandbox order";
+
+    const heading = doc.createElement("h2");
+    heading.textContent = "Order confirmed";
+
+    const list = detailList([
+      ["Item", item.title ?? "the demo product"],
+      ["Variant", item.variant ?? "—"],
+      ["Delivery region", order.delivery_region ?? "unknown"],
+      ["Total", order.formatted_total ?? formatAud(order.total_cents) ?? "unpriced"],
+    ]);
+
+    const idRow = doc.createElement("p");
+    idRow.className = "order-id-row";
+    const idCode = doc.createElement("code");
+    idCode.className = "order-id";
+    idCode.textContent = order.order_id ?? "unknown";
+    idRow.append(idCode);
+
+    const note = doc.createElement("p");
+    note.className = "note";
+    note.textContent =
+      "Nothing was charged. This is a sandbox order in Stripe test mode; no retailer order or fulfilment happens.";
+
+    const link = doc.createElement("p");
+    link.className = "order-link";
+    const anchor = doc.createElement("a");
+    anchor.href =
+      envelope.links?.find((entry) => entry.type === "order_page")?.url ??
+      `/agent/order/${order.order_id ?? ""}`;
+    anchor.textContent = "View order page";
+    link.append(anchor);
+
+    const card = doc.createElement("div");
+    card.className = "order-confirmed";
+    card.append(kicker, heading, list, idRow, note, link);
+
+    handoffNode.append(card);
     handoffNode.hidden = false;
   }
+}
+
+/**
+ * The declarative feedback form.
+ *
+ * Chrome's declarative WebMCP API turns a plain `<form>` into a tool through
+ * markup alone — `toolname` and `tooldescription` on the form,
+ * `toolparamdescription` on each control — so an agent can read and fill it
+ * without any of the imperative registration this file does elsewhere. The
+ * markup carries those attributes; this handler is only what the page does
+ * once the form is submitted, by an agent or by a person.
+ *
+ * The submit is intercepted and posted as JSON to the same endpoint the
+ * `submit_feedback` tool uses, so both routes produce one identical record.
+ * `SubmitEvent.agentInvoked` and `respondWith` are read defensively: where the
+ * browser supplies them the agent gets the acknowledgement back directly, and
+ * where it does not the page still works for a person.
+ *
+ * Everything rendered here uses `textContent`. The page's CSP forbids inline
+ * script, which is why this lives in the module rather than in the markup.
+ */
+function wireFeedbackForm(doc) {
+  const form = doc.getElementById("feedback-form");
+  const result = doc.getElementById("feedback-result");
+  // Optional page furniture, like the prompt block: no form, no handler.
+  if (!form || !result) {
+    return;
+  }
+
+  const fetchImpl =
+    typeof globalThis !== "undefined" && typeof globalThis.fetch === "function"
+      ? globalThis.fetch.bind(globalThis)
+      : null;
+
+  form.addEventListener("submit", (event) => {
+    event.preventDefault();
+    const read = (id) => doc.getElementById(id)?.value ?? "";
+    const freeText = read("feedback-text").trim();
+    if (freeText.length === 0) {
+      result.textContent = "Say what happened first; the form sends nothing empty.";
+      return;
+    }
+    const struggle = read("feedback-struggle");
+    const body = {
+      kind: "feedback",
+      context: { checkout_id: null, order_id: null },
+      sentiment: read("feedback-sentiment") || "neutral",
+      free_text: freeText.slice(0, 1000),
+      struggle_points: struggle ? [struggle] : [],
+      reason: null,
+    };
+
+    result.textContent = "Sending…";
+    const sent = (fetchImpl ? fetchImpl(FEEDBACK_PATH, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Accept: "application/json" },
+      credentials: "same-origin",
+      body: JSON.stringify(body),
+    }) : Promise.reject(new Error("no fetch")))
+      .then((response) => response.json())
+      .then((payload) => {
+        const id = payload?.data?.feedback_id;
+        const text = id
+          ? `Thank you. Recorded as ${id}.`
+          : "Robodepo could not record that. Nothing was sent twice; try again.";
+        result.textContent = text;
+        return text;
+      })
+      .catch(() => {
+        const text = "Robodepo could not record that. Nothing was sent twice; try again.";
+        result.textContent = text;
+        return text;
+      });
+
+    // Hand the acknowledgement straight back to an agent that submitted this.
+    if (event.agentInvoked && typeof event.respondWith === "function") {
+      event.respondWith(sent);
+    }
+  });
 }
 
 /**

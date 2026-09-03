@@ -17,6 +17,13 @@ To inspect the tool list, schemas, and call any tool by hand, install the
 [**Model Context Tool Inspector**](https://chromewebstore.google.com/detail/webmcp-model-context-tool/gbpdfapgefenggkahomfgkhfehlcenpd)
 Chrome extension.
 
+A status line under the hero updates live with each tool call the agent makes, and the
+activity panel opens itself the moment the first one arrives, so a visitor can watch the
+sequence happen. The feedback form near the bottom of the page is the declarative twin
+of `submit_feedback`: it uses the `toolname`, `tooldescription` and
+`toolparamdescription` attributes Chrome documents as a WebMCP origin trial, so an agent
+can fill and submit it straight from the markup, with no JavaScript registration at all.
+
 A worked sequence, once the page has registered its tools:
 
 1. `search_catalog`: returns the demo catalogue (one product).
@@ -27,7 +34,8 @@ A worked sequence, once the page has registered its tools:
    `confirmation_url`.
 4. Open that `confirmation_url`. It now points at the approval page; touch the sensor
    (fingerprint or face; devices with no biometric get the plain single button instead),
-   and land on the order page. This step is the human's alone: no tool can do it.
+   and land on Robodepo's own styled order page at `/agent/order/{orderId}`. This step is
+   the human's alone: no tool can do it.
 5. `get_order`: reads the confirmed order back: item, delivery region, totals.
 
 The only address the sandbox accepts, exactly as shown, field for field:
@@ -111,7 +119,7 @@ unedited.
 | Tool | Description |
 |---|---|
 | `search_catalog` | Returns the Robodepo demo catalogue as listings with product id, title, availability, the disclosed source retailer and price in AUD integer cents. Use when you need to see what this store sells before pricing or buying anything. Not for one product's full record; use get_product. Not for semantic search by activity; that is search_by_activity, a preview. Full guide: get_tool_guide or /agent/tools.json#search_catalog |
-| `get_product` | Returns one product's published record: title, variant, availability, the source retailer's price and Robodepo's displayed price, both in AUD integer cents. Use when you hold a product_id and want the full record and price disclosure. Not for browsing the catalogue; use search_catalog. include_evidence is a roadmap field and is ignored today. Full guide: get_tool_guide or /agent/tools.json#get_product |
+| `get_product` | Returns one product's published record: title, variant, availability, the source retailer's price and Robodepo's displayed price, both in AUD integer cents. Use when you hold a product_id and want the full record and price disclosure. Not for browsing the catalogue; use search_catalog. include_evidence returns the cited evidence pack where one exists. Full guide: get_tool_guide or /agent/tools.json#get_product |
 | `create_checkout` | Runs the whole pre-purchase path in one call (cart, item, address, shipping quote, mandate) and returns a priced checkout in AUD integer cents plus the link the person opens to approve it. Use when the person has chosen the product and you are ready to show a final delivered price. Not for placing the order; no tool can, the person approves on Robodepo's own page. Full guide: get_tool_guide or /agent/tools.json#create_checkout |
 | `cancel_checkout` | Closes a checkout prepared in this browser and records the decline, returning status canceled. Use when the person declines, so a refusal is a recorded outcome rather than an inferred one. Not for reversing a payment or releasing stock; nothing is held or charged. Not for after approval; use get_order. Full guide: get_tool_guide or /agent/tools.json#cancel_checkout |
 | `get_order` | Reads back a confirmed sandbox order: status, item, quantity, delivery region and totals in AUD integer cents. Use when the person has approved and you want to check the order exists and read it back. Pass order_id or checkout_id. Not for confirming the order; no tool can. Not for pricing; use create_checkout. Full guide: get_tool_guide or /agent/tools.json#get_order |
@@ -132,6 +140,20 @@ fabricated data.
 | `compare_products` | Preview — not operational in this demo. Describes the roadmap only; returns status not_available and must not be called to do real work. It will take two to five product ids and return one aligned comparison, with the cited evidence behind each claim. Use get_product on each id today. Full guide: get_tool_guide or /agent/tools.json#compare_products |
 | `get_shipping_options` | Preview — not operational in this demo. Describes the roadmap only; returns status not_available and must not be called to do real work. It will list every shipping service available for a prepared checkout, with price in AUD integer cents and a delivery estimate. Use create_checkout today, which returns the one service that exists. Full guide: get_tool_guide or /agent/tools.json#get_shipping_options |
 | `subscribe_replenishment_alerts` | Preview — not operational in this demo. Describes the roadmap only; returns status not_available and must not be called to do real work. It will register a weekly, monthly or quarterly reminder for a consumable, so the person is prompted before they run out. Use get_product today. Full guide: get_tool_guide or /agent/tools.json#subscribe_replenishment_alerts |
+
+## Evidence pack
+
+`get_product` accepts an `include_evidence` boolean. For the one demo product this
+sandbox carries, that returns a real evidence pack: specifications, sizing, care,
+review themes and permitted YouTube transcript evidence, every claim tied to a source
+id, with a `gaps` list naming what no source covered and a freshness policy governing
+when the pack gets rebuilt. Building a pack for every product in the catalogue is the
+roadmap, not a claim about today.
+
+The exact pack the live tool reads is
+[`docs/evidence/holiday-bucket-beige-canvas-l-xl-beige.json`](./docs/evidence/holiday-bucket-beige-canvas-l-xl-beige.json)
+in this repository, and the same file is served live at
+[`https://robodepo.shop/agent/evidence/holiday-bucket-beige-canvas-l-xl-beige`](https://robodepo.shop/agent/evidence/holiday-bucket-beige-canvas-l-xl-beige).
 
 ## Response envelope
 
