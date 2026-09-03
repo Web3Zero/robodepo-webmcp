@@ -3152,6 +3152,9 @@ export function mountAgentPage(tools, doc, registration) {
     Promise.resolve(tools.approvalGestureAvailable())
       .then((available) => {
         button.textContent = available ? APPROVE_GESTURE_LABEL : APPROVE_PLAIN_LABEL;
+        // The label and the class say the same thing, so styling can never
+        // promise a fingerprint the device does not have.
+        button.classList?.toggle?.("has-fingerprint", available);
       })
       .catch(() => undefined);
   }

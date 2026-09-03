@@ -249,10 +249,11 @@ section h2 {
 
 #handoff {
   max-width: var(--content-width);
-  border: 1px solid var(--accent);
+  border: 2px solid var(--accent);
   border-radius: 10px;
   background: var(--paper-raised);
   padding: 1.5rem 1.6rem 1.75rem;
+  box-shadow: 0 2px 14px rgba(31, 95, 86, 0.12);
 }
 
 #handoff[hidden] {
@@ -406,7 +407,9 @@ dl.handoff dd {
   padding: 1.6rem 1.6rem 1.75rem;
 }
 
-.handoff-total {
+.handoff-total,
+#handoff > dl.handoff dd:nth-of-type(3),
+.order-confirmed > dl.handoff dd:nth-of-type(4) {
   font-size: 1.4rem;
   font-weight: 700;
   color: var(--accent);
@@ -557,7 +560,114 @@ button:hover {
 }
 
 .handoff-button {
+  display: block;
+  width: 100%;
   margin-top: 1.4rem;
+  position: relative;
+}
+
+/*
+ * Inert until the client script adds it: `renderHandoff`'s own
+ * `approvalGestureAvailable()` callback already knows whether the biometric
+ * label is showing (`public/agent/robodepo-webmcp.js`, the block that sets
+ * `button.textContent = available ? APPROVE_GESTURE_LABEL : APPROVE_PLAIN_LABEL`);
+ * a one-line `button.classList.toggle("has-fingerprint", available)` there
+ * lights up this glyph exactly when the label does. Styled ahead of that
+ * wiring so the CSS is ready the moment it lands.
+ */
+.handoff-button.has-fingerprint {
+  padding-left: 2.75rem;
+}
+
+.handoff-button.has-fingerprint::before {
+  content: "";
+  position: absolute;
+  left: 1.15rem;
+  top: 50%;
+  width: 1.15rem;
+  height: 1.15rem;
+  transform: translateY(-50%);
+  background-repeat: no-repeat;
+  background-size: contain;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Ccircle cx='12' cy='12' r='9' fill='none' stroke='white' stroke-width='1.6'/%3E%3Cpath d='M6 10q6-6 12 0' fill='none' stroke='white' stroke-width='1.6' stroke-linecap='round'/%3E%3Cpath d='M5 13q7-7 14 0' fill='none' stroke='white' stroke-width='1.6' stroke-linecap='round'/%3E%3Cpath d='M6.5 16q5.5-5.5 11 0' fill='none' stroke='white' stroke-width='1.6' stroke-linecap='round'/%3E%3Cpath d='M8 18.5q4-4 8 0' fill='none' stroke='white' stroke-width='1.6' stroke-linecap='round'/%3E%3C/svg%3E");
+}
+
+.handoff-status {
+  margin: 0.85rem 0 0;
+  min-height: 1.3em;
+  color: var(--ink-soft);
+  font-size: 0.88rem;
+}
+
+.handoff-secondary {
+  margin: 0.5rem 0 0;
+  font-size: 0.82rem;
+}
+
+.handoff-secondary a {
+  color: var(--ink-faint);
+}
+
+.handoff-secondary a:hover {
+  color: var(--accent);
+}
+
+.order-confirmed {
+  border: 1px solid var(--accent);
+  border-radius: 8px;
+  background: var(--accent-tint);
+  padding: 1.1rem 1.25rem 1.3rem;
+}
+
+.order-confirmed h2 {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.order-confirmed h2::before {
+  content: "\2713";
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 1.4rem;
+  height: 1.4rem;
+  border-radius: 50%;
+  background: var(--accent);
+  color: #ffffff;
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+
+.order-id-row {
+  margin: 0.85rem 0 0;
+}
+
+/* The chip's own tint would vanish against the completed card's matching
+   background, so it gets a plain paper backing here specifically. */
+.order-confirmed .order-id {
+  background: var(--paper-raised);
+}
+
+.order-link {
+  margin: 1.25rem 0 0;
+}
+
+.order-link a {
+  display: inline-block;
+  border: 1px solid var(--accent);
+  border-radius: 7px;
+  padding: 0.55rem 1.1rem;
+  color: var(--accent);
+  font-weight: 600;
+  font-size: 0.88rem;
+  text-decoration: none;
+}
+
+.order-link a:hover {
+  background: var(--accent);
+  color: #ffffff;
 }
 
 /* ---------------------------------- Details -------------------------------------- */

@@ -32,10 +32,12 @@ A worked sequence, once the page has registered its tools:
 3. `create_checkout`: runs the whole pre-purchase path (cart, address, shipping quote,
    purchase mandate) in one call, against the accepted sandbox address below, and returns a
    `confirmation_url`.
-4. Open that `confirmation_url`. It now points at the approval page; touch the sensor
-   (fingerprint or face; devices with no biometric get the plain single button instead),
-   and land on Robodepo's own styled order page at `/agent/order/{orderId}`. This step is
-   the human's alone: no tool can do it.
+4. The approval panel scrolls into view on the same page: item, delivery region and
+   total, one button. Touch ID or the device's own check where available, a plain button
+   otherwise, then the panel becomes a styled "Order confirmed" card in place, no
+   navigation. This step is the human's alone: no tool can do it. The `confirmation_url`
+   in the response still opens the same approval on its own page, kept as a fallback for
+   a link handed off elsewhere.
 5. `get_order`: reads the confirmed order back: item, delivery region, totals.
 
 The only address the sandbox accepts, exactly as shown, field for field:
@@ -66,9 +68,8 @@ Find me a beige canvas bucket hat and get it ready to buy.
 
 That single prompt exercises the whole tool chain: `search_catalog` finds the hat,
 `get_product` discloses its source and price, and `create_checkout` runs cart through
-mandate and returns a `confirmation_url`. The agent hands that link back rather than
-trying to press it, because no tool can. Opening the link is the one step that stays with
-the human.
+mandate. The page then scrolls its approval panel into view on its own; clicking it is
+the one step that stays with the human, because no tool can do it for them.
 
 ## The full story
 
@@ -200,18 +201,22 @@ layer.
 ## Why the human confirms on Robodepo's own page
 
 **Experience.** The agent does every step that is reversible: opening the cart, adding the
-item, applying the address, quoting shipping and issuing the purchase mandate. The human
-sees the item, the delivery region and the total on one page, with one button. Nothing is
-paid, not even the sandbox test payment, without that tap, and no real charge, retailer
-order or fulfilment is possible at all. The page shows exactly what will be ordered: the
-immutable item, variant, delivery region and amounts the mandate was issued against.
+item, applying the address, quoting shipping and issuing the purchase mandate. After
+`create_checkout`, the approval panel scrolls into view right there on the page: the item,
+the delivery region and the total, with one button. Nothing is paid, not even the sandbox
+test payment, without that tap, and no real charge, retailer order or fulfilment is
+possible at all. The panel shows exactly what will be ordered, the immutable item,
+variant, delivery region and amounts the mandate was issued against, then becomes a
+styled "Order confirmed" card once approved, without the page ever navigating away.
 
-**Security.** There is no tool that can submit the confirmation: this catalogue has no
-`complete_checkout`, and the agent is told not to submit that form. The confirmation page
-requires the browser's own run cookie, and the submission additionally requires a
-single-use CSRF value and a server-issued single-use idempotency key, both minted by that
-page. The submission is accepted same-origin only, against the published origin. The
-confirmation session and its cookie expire after 5 minutes. The confirmation page cannot be
+**Security.** No tool can submit the confirmation. The approval routine is not part of
+the registered catalogue and cannot be reached through `robodepoTools.call()`, the same
+function every real tool call goes through; the agent is told not to attempt it. The same
+checks protect the confirmation whether it happens in the page's own panel or on the
+separate fallback page described below: the browser's own run cookie, plus a single-use
+CSRF value and a server-issued single-use idempotency key minted fresh each time. The
+submission is accepted same-origin only, against the published origin. The confirmation
+session and its cookie expire after 5 minutes. The fallback confirmation page cannot be
 framed (`frame-ancestors 'none'`, `X-Frame-Options: DENY`). Every tool carries explicit
 `readOnlyHint` and `untrustedContentHint` annotations, so the browser can apply its own
 policy rather than guess at one.
@@ -221,24 +226,25 @@ Shopify's storefront tools and the OpenAI/Stripe Agentic Commerce Protocol (`sea
 `get_product`, `create_checkout`, `cancel_checkout`, `get_order`), so an agent trained on
 those reads Robodepo without translation.
 
-### One-touch approval
+### One-click approval inside the page
 
-`create_checkout`'s `confirmation_url` now points at a same-origin approval page
-(`/approve/{mandateId}`) in front of the unchanged confirmation page, and `links[]` carries
-both `approval_page` and `confirmation_page` so an agent or a human can reach either. The
-approval page shows the same item, variant, delivery region and total, then asks the
-browser for a platform biometric (Touch ID, a fingerprint or face unlock, Windows Hello), a
-passkey-style user-verification gesture, before submitting the store's own confirmation
-form with the server's unchanged single-use `csrf` value and idempotency key. A device with
-no platform authenticator falls back to the plain single button, exactly as
-`/confirm/{mandateId}` has always worked.
+After `create_checkout`, the page scrolls its approval panel into view right there on
+`/agent`, no navigation, no separate tab. One click, Touch ID or the device's own check
+where the browser offers one, a plain button otherwise, submits the same server-verified
+confirmation the standalone page always has, and the panel becomes a styled "Order
+confirmed" card in place. Because the page never navigates away, the tools stay
+registered and the agent can read the order straight back with `get_order`.
 
-This gesture proves a human is present at the device; it is not a server-side control. The
-credential it creates is discarded immediately: nothing derived from it is sent to
-Robodepo or anywhere else, and the server has no way to know the gesture happened. Every
-check that actually protects the purchase is unchanged and still runs server-side: the run
-cookie, the confirmation cookie, the single-use CSRF value, the single-use idempotency key,
-the same-origin requirement and the five-minute confirmation session.
+The touch proves a person is present at the device; it is not a server-side control and
+never reaches the server itself. Nothing derived from it is sent to Robodepo or anywhere
+else, and the server has no way to know the gesture happened; the same run cookie,
+single-use CSRF value and single-use idempotency key it has always checked are what
+actually authorise the submission.
+
+The separate approval page (`/approve/{mandateId}`) and the store's own confirmation page
+still exist, kept as a fallback for a link pasted somewhere the tools aren't registered
+in the same browser. `create_checkout`'s response still carries both `approval_page` and
+`confirmation_page` in `links[]`, so an agent can hand either one across.
 
 ## How this is different
 
