@@ -1,0 +1,54 @@
+<!--
+  This is a static rendering of the approval page template built by
+  approvalPageHtml() in the live site's route handler
+  (src/app/approve/[mandateId]/route.app.ts in the main Robodepo repository,
+  not part of this mirror) at https://robodepo.shop/approve/{mandateId}.
+
+  Every `{{...}}` value below is filled in server-side, per request, by
+  reading the store's own existing confirmation page
+  (`GET /confirm/{mandateId}`) exactly as a browser would, and copying six
+  values out of it: the item title, variant, delivery region and total shown
+  to the person, plus the page's own single-use `csrf` value and
+  server-issued `idempotency_key` — carried into this identical form
+  untouched. The route also copies that confirmation page's session cookie
+  back to the browser verbatim, so this static file, opened on its own, has
+  no session, no live csrf value and no live key, and its form cannot be
+  submitted anywhere. It exists so the biometric gesture in ./approve.js can
+  be read alongside the markup it operates on. See ../README.md's
+  "One-touch approval" section for how the whole handoff fits together, and
+  try the real thing at the live URL there.
+-->
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>Approve sandbox purchase — Robodepo (working name)</title>
+<link rel="stylesheet" href="./agent.css">
+</head>
+<body>
+<main>
+<p class="eyebrow">Public validation sandbox</p>
+<h1>Approve sandbox purchase</h1>
+
+<section>
+<dl class="handoff">
+<dt>Item</dt><dd>{{item_title}}</dd>
+<dt>Variant</dt><dd>{{item_variant}}</dd>
+<dt>Delivery region</dt><dd>{{delivery_region}}</dd>
+<dt>Amount</dt><dd>{{formatted_total}}</dd>
+</dl>
+<form method="post" action="{{form_action}}" id="approve-form">
+<input type="hidden" name="csrf" value="{{csrf}}">
+<input type="hidden" name="idempotency_key" value="{{idempotency_key}}">
+<button type="submit" id="approve-button">Approve with fingerprint or face</button>
+</form>
+<p id="approve-status"></p>
+<p class="note">Sandbox only. No real charge. The approval gesture is checked by your browser; Robodepo&#39;s server then verifies the same one-time confirmation it always has.</p>
+<p class="note"><a href="/confirm/{{mandate_id}}">Use the plain confirmation page instead</a></p>
+</section>
+</main>
+<script type="module" src="./approve.js"></script>
+</body>
+</html>

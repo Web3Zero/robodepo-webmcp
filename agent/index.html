@@ -1,0 +1,78 @@
+<!--
+  This is a static copy of the page the live site serves at
+  https://robodepo.shop/agent from a Next.js route handler
+  (src/app/agent/route.app.ts in the main Robodepo repository, not part of
+  this mirror). That handler serves the same markup below with these
+  response headers:
+
+    Content-Type: text/html; charset=utf-8
+    X-Robots-Tag: noindex
+    Cache-Control: no-store
+    Referrer-Policy: no-referrer
+    Content-Security-Policy: default-src 'self'; script-src 'self';
+      style-src 'self' 'unsafe-inline'; connect-src 'self'; img-src 'self'
+      data:; frame-ancestors 'none'; form-action 'self'
+    X-Content-Type-Options: nosniff
+
+  This static file has no server, so it cannot send those headers itself.
+  It is included so the WebMCP tool code and the page that registers it can
+  be read and run together. See ../README.md for how to try the tools
+  against the live, header-complete deployment.
+-->
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>Robodepo (working name) — agent tools</title>
+<link rel="stylesheet" href="./agent.css">
+</head>
+<body>
+<main>
+<p class="eyebrow">Public validation sandbox</p>
+<h1>Robodepo agent tools</h1>
+<p class="lede">This page registers WebMCP tools with your browser&#39;s agent. Search, price and prepare a sandbox order through tools; the person taps the one confirmation. No real charge, retailer order or fulfilment can occur.</p>
+
+<p id="webmcp-status">Checking this browser for WebMCP&#8230;</p>
+
+<section>
+<h2>Tools</h2>
+<ul class="tools" id="tool-list"></ul>
+</section>
+
+<section id="handoff" hidden></section>
+
+<section id="why-human-confirms">
+<h2>Why the person confirms on Robodepo&#39;s own page</h2>
+<h3>Experience</h3>
+<ul>
+<li>The agent does every step that is reversible: opening the cart, adding the item, applying the address, quoting shipping and issuing the purchase mandate.</li>
+<li>The person sees the item, the delivery region and the total on one page, with one button.</li>
+<li>Nothing is paid — not even the sandbox test payment — without that tap, and no real charge, retailer order or fulfilment is possible at all.</li>
+<li>The page shows exactly what will be ordered: the immutable item, variant, delivery region and amounts the mandate was issued against.</li>
+</ul>
+<h3>Security</h3>
+<ul>
+<li>There is no tool that can submit the confirmation. This catalogue has no <code>complete_checkout</code>, and the agent is told not to submit that form.</li>
+<li>The confirmation page requires this browser&#39;s own run cookie, and the submission additionally requires a single-use CSRF value and a server-issued single-use idempotency key, both minted by that page.</li>
+<li>The submission is accepted same-origin only, against the published origin.</li>
+<li>The confirmation session and its cookie expire after 5 minutes.</li>
+<li>The confirmation page cannot be framed: <code>frame-ancestors &#39;none&#39;</code> and <code>X-Frame-Options: DENY</code>.</li>
+<li>Every tool carries explicit <code>readOnlyHint</code> and <code>untrustedContentHint</code> annotations, so the browser can apply its own policy rather than guess at one.</li>
+</ul>
+<p class="note">Tool names follow the verb_noun dialect used by Google&#39;s Universal Commerce Protocol, Shopify&#39;s storefront tools and the OpenAI/Stripe Agentic Commerce Protocol (<code>search_catalog</code>, <code>get_product</code>, <code>create_checkout</code>, <code>cancel_checkout</code>, <code>get_order</code>), so an agent trained on those reads Robodepo without translation.</p>
+</section>
+
+<section>
+<h2>Activity</h2>
+<ol class="activity" id="activity"></ol>
+</section>
+
+<footer>
+Sandbox only. Source retailer disclosed on every listing; the displayed price may differ from the source. Trust manifest: <code>/trust-manifest.json</code>
+</footer>
+</main>
+<script type="module" src="./robodepo-webmcp.js"></script>
+</body>
+</html>
