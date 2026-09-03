@@ -25,31 +25,114 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="robots" content="noindex, nofollow">
-<title>Robodepo (working name) — agent tools</title>
+<title>Robodepo agent tools</title>
 <link rel="stylesheet" href="./agent.css">
 </head>
 <body>
 <main>
+
+<header class="hero">
 <p class="eyebrow">Public validation sandbox</p>
-<h1>Robodepo agent tools</h1>
-<p class="lede">This page registers WebMCP tools with your browser&#39;s agent. Search, price and prepare a sandbox order through tools; the person taps the one confirmation. No real charge, retailer order or fulfilment can occur.</p>
+<h1>Shopping agents can find products. They still fail at checkout.</h1>
+<p class="lede">Robodepo is the evidence and transaction layer built for shopping agents: trustworthy machine-readable product information, one reliable path to a prepared order, and one final decision that stays with the person.</p>
+<p class="hero-note">No real charge, retailer order or fulfilment can occur.</p>
+<p id="webmcp-status" class="status-pill">Checking this browser for WebMCP&#8230;</p>
+</header>
 
-<p id="webmcp-status">Checking this browser for WebMCP&#8230;</p>
-
-<section>
-<h2>Tools</h2>
-<ul class="tools" id="tool-list"></ul>
+<section class="section-try">
+<div class="section-head"><span class="kicker">01</span><h2>Try the complete journey</h2></div>
+<div class="prompt-block">
+<pre class="prompt"><code id="agent-prompt">Find the beige canvas bucket hat in L-XL, show me its source and delivered price, prepare the sandbox checkout, then give me the approval link. Do not confirm it for me.</code></pre>
+<button type="button" id="copy-prompt-button" class="copy-button" aria-live="polite">Copy</button>
+</div>
+<p class="note">Works natively in ChatGPT&#39;s in-app browser, no flag needed. In Chrome 149+ enable <code>chrome://flags/#enable-webmcp-testing</code>; the Model Context Tool Inspector extension lets you call tools by hand.</p>
+<ol class="journey">
+<li><span class="journey-step">01</span><span class="journey-label">Search</span></li>
+<li><span class="journey-step">02</span><span class="journey-label">Product truth</span></li>
+<li><span class="journey-step">03</span><span class="journey-label">Prepared checkout</span></li>
+<li><span class="journey-step">04</span><span class="journey-label">Person confirms</span></li>
+<li><span class="journey-step">05</span><span class="journey-label">Agent verifies order</span></li>
+</ol>
 </section>
 
 <section id="handoff" hidden></section>
 
+<section class="section-proof section-flat">
+<div class="section-head"><span class="kicker">02</span><h2>More than a wrapper</h2></div>
+<div class="proof-grid">
+<article class="proof-card">
+<h3>One shared purchase system</h3>
+<p>The site and the tools run the same order service and the same state machine. What an agent prepares through a tool is exactly what a person would have created by clicking through the site.</p>
+</article>
+<article class="proof-card">
+<h3>Safe retries</h3>
+<p>Every mutation carries an idempotency key, so a repeated or interrupted request cannot create a second order.</p>
+</article>
+<article class="proof-card">
+<h3>Price and source integrity</h3>
+<p>Source retailer, source price and displayed price are all disclosed on every listing, so nothing sits hidden between what the agent reads and what the person pays.</p>
+</article>
+<article class="proof-card">
+<h3>Human authority</h3>
+<p>The agent prepares everything. The irreversible step needs the browser&#39;s own single-use confirmation and cannot be taken by a tool.</p>
+</article>
+<article class="proof-card">
+<h3>Built to be measured</h3>
+<p>The store is a tracer instrumented so real agents can be run through it under sealed conditions. Results are not self-reported.</p>
+</article>
+</div>
+</section>
+
+<section class="section-roadmap section-flat">
+<div class="section-head"><span class="kicker">03</span><h2>Where this goes</h2></div>
+<p class="section-intro">None of this is built into the demo above. It is the direction, stated as direction, not as a claim about what runs today.</p>
+<div class="roadmap-grid">
+<article class="roadmap-card">
+<span class="roadmap-badge preview">Preview</span>
+<h3>The best source of product truth</h3>
+<p>Specifications, manuals, review themes and permitted YouTube transcript evidence, with citations and freshness, so a claim traces back to a real source.</p>
+<p class="roadmap-tools"><code>get_evidence_pack</code></p>
+</article>
+<article class="roadmap-card">
+<span class="roadmap-badge preview">Preview</span>
+<h3>A custom store for every request</h3>
+<p>A compact, checkout-ready shortlist built for the request in front of the agent, so it is not reading thousands of irrelevant pages. The full catalogue stays open behind it.</p>
+<p class="roadmap-tools"><code>create_custom_store</code></p>
+</article>
+<article class="roadmap-card">
+<span class="roadmap-badge preview">Preview</span>
+<h3>Search by need</h3>
+<p>Found from the human&#39;s job, constraints and intended use, not just the words that happen to be in a product title.</p>
+<p class="roadmap-tools"><code>search_by_activity</code></p>
+</article>
+<article class="roadmap-card">
+<span class="roadmap-badge roadmap">Roadmap</span>
+<h3>A universal transaction layer</h3>
+<p>One consistent way to research and transact across many merchants. The destination is an aggregation layer for agents across millions of merchants and products worldwide. That is stated as a destination, not a fact.</p>
+<p class="roadmap-tools"><code>compare_products</code><code>get_shipping_options</code></p>
+</article>
+<article class="roadmap-card">
+<span class="roadmap-badge preview">Preview</span>
+<h3>Continued assistance</h3>
+<p>Replenishment reminders and price alerts, so the relationship does not end the moment an order confirms.</p>
+<p class="roadmap-tools"><code>subscribe_replenishment_alerts</code></p>
+</article>
+</div>
+</section>
+
+<section class="section-decision section-flat">
+<div class="section-head"><span class="kicker">04</span><h2>The person keeps the final decision</h2></div>
+<p>The agent does everything reversible: it searches, prices and prepares the order down to the last detail. It cannot take the one step that spends money. That step happens on Robodepo&#39;s own page, in the person&#39;s own browser, with one deliberate action.</p>
+<details class="security-detail">
+<summary>Security detail</summary>
 <section id="why-human-confirms">
 <h2>Why the person confirms on Robodepo&#39;s own page</h2>
 <h3>Experience</h3>
 <ul>
 <li>The agent does every step that is reversible: opening the cart, adding the item, applying the address, quoting shipping and issuing the purchase mandate.</li>
-<li>The person sees the item, the delivery region and the total on one page, with one button.</li>
-<li>Nothing is paid — not even the sandbox test payment — without that tap, and no real charge, retailer order or fulfilment is possible at all.</li>
+<li>The person sees the item, variant, delivery region and total on one page, with one button.</li>
+<li>Where the browser has a fingerprint or face unlock, that button is one biometric touch on Robodepo&#39;s approval page. Where it does not, the same page shows the plain confirmation button instead, and <code>/confirm/{mandate_id}</code> is still there unchanged.</li>
+<li>Nothing is paid, not even the sandbox test payment, without that tap, and no real charge, retailer order or fulfilment is possible at all.</li>
 <li>The page shows exactly what will be ordered: the immutable item, variant, delivery region and amounts the mandate was issued against.</li>
 </ul>
 <h3>Security</h3>
@@ -59,18 +142,31 @@
 <li>The submission is accepted same-origin only, against the published origin.</li>
 <li>The confirmation session and its cookie expire after 5 minutes.</li>
 <li>The confirmation page cannot be framed: <code>frame-ancestors &#39;none&#39;</code> and <code>X-Frame-Options: DENY</code>.</li>
+<li>The biometric touch adds no server-side authority. The credential is created by the browser and discarded; nothing derived from it is sent to Robodepo, and the server cannot tell whether it happened. It is a user-presence gesture in front of the checks above, not a second factor and not a replacement for any of them.</li>
 <li>Every tool carries explicit <code>readOnlyHint</code> and <code>untrustedContentHint</code> annotations, so the browser can apply its own policy rather than guess at one.</li>
 </ul>
 <p class="note">Tool names follow the verb_noun dialect used by Google&#39;s Universal Commerce Protocol, Shopify&#39;s storefront tools and the OpenAI/Stripe Agentic Commerce Protocol (<code>search_catalog</code>, <code>get_product</code>, <code>create_checkout</code>, <code>cancel_checkout</code>, <code>get_order</code>), so an agent trained on those reads Robodepo without translation.</p>
 </section>
+</details>
+</section>
 
-<section>
-<h2>Activity</h2>
+<section class="section-tools section-flat">
+<details class="tool-catalogue">
+<summary>Tool catalogue (14 tools)</summary>
+<ul class="tools" id="tool-list"></ul>
+</details>
+</section>
+
+<section class="section-activity section-flat">
+<details class="activity-log">
+<summary>Activity log</summary>
 <ol class="activity" id="activity"></ol>
+</details>
 </section>
 
 <footer>
-Sandbox only. Source retailer disclosed on every listing; the displayed price may differ from the source. Trust manifest: <code>/trust-manifest.json</code>
+<p>Robodepo is a working name. Sandbox only: no real charge, retailer order or fulfilment.</p>
+<p>Source retailer disclosed on every listing; displayed price may differ from the source. Trust manifest: <code>/trust-manifest.json</code>. Code: <a href="https://github.com/Web3Zero/robodepo-webmcp">github.com/Web3Zero/robodepo-webmcp</a></p>
 </footer>
 </main>
 <script type="module" src="./robodepo-webmcp.js"></script>

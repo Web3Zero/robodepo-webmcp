@@ -138,12 +138,13 @@ function message(type, code, severity, path, content) {
 }
 
 /**
- * `detailed` is the default for anything that is not the literal `"concise"`,
- * because the fuller source disclosure is the safer thing to return when a
- * caller has not clearly asked for the short one.
+ * `concise` is the default — including when the property is null or absent —
+ * so an agent's context is not spent on a source block it did not ask for.
+ * The disclosure is never dropped by concise, only shortened, so the safe
+ * default and the small default are the same thing here.
  */
 export function wantsDetail(input) {
-  return input?.response_format !== "concise";
+  return input?.response_format === "detailed";
 }
 
 /**
@@ -183,6 +184,11 @@ export function approvalUrlFor(confirmationUrl, mandateId, origin) {
     }
   }
   return `${origin}${path}`;
+}
+
+/** The operational tool a preview's own catalogue entry sends callers to. */
+export function previewRecovery(name) {
+  return TOOLS.find((tool) => tool.name === name)?.recover ?? null;
 }
 
 function isPrintableAscii(value) {
@@ -386,13 +392,20 @@ const UNKNOWN_ERROR = {
  * docs/product/agent-tool-catalogue-design.md.
  * ------------------------------------------------------------------------ */
 
-const PREVIEW_PREFIX = "Preview — not operational in this demo. ";
+/**
+ * Every preview description opens with this, unabridged. It says three things
+ * before anything else: this is not built, it exists to describe the roadmap,
+ * and it must not be called to do real work.
+ */
+export const PREVIEW_PREFIX =
+  "Preview — not operational in this demo. Describes the roadmap only; " +
+  "returns status not_available and must not be called to do real work. ";
 
 const RESPONSE_FORMAT_PROPERTY = {
   type: "string",
   enum: ["concise", "detailed"],
   description:
-    "How much of each record to return. `concise` returns the fields an agent needs to act plus a short disclosure — `source_retailer` and `price_may_differ`. `detailed` returns the full `source` block instead, adding the retailer's URL and when the price was last checked. The disclosure is never dropped, only shortened; neither format returns personal data.",
+    "How much to return. `concise` is the default when null: acting fields plus source_retailer and price_may_differ. `detailed` adds the source block.",
 };
 
 export const TOOLS = Object.freeze([
@@ -400,349 +413,497 @@ export const TOOLS = Object.freeze([
     name: "search_catalog",
     title: "Search the Robodepo catalogue",
     kind: "operational",
-    description: [
-      "Returns the Robodepo demo catalogue as listings, each with its product id, title, variant, availability, the disclosed source retailer, and the displayed price as AUD integer cents plus a formatted string such as A$113.85.",
-      "Use this when you want to see what this store actually sells before you price or buy anything. Do not use this for the full record of one product; use `get_product` instead. Do not use it for semantic search by activity or function; that is `search_by_activity`, which is a preview and does not work yet.",
-      "The `query` parameter is recorded and returned to you unchanged. The demo catalogue holds exactly one product, so this tool does not rank, filter or keyword-match anything: deciding whether the returned listing answers the query is your judgement, not the store's. `limit` bounds how many listings come back, and `response_format` chooses how much of the source disclosure travels with each one.",
-      "It returns no shipping cost, no delivery estimate, no reviews and no evidence pack. It holds no handle, takes no lock and reserves no stock, so calling it twice changes nothing.",
-      "Outputs: `resource.catalogue_size` states how many products the demo catalogue holds. Each entry in `resource.listings[]` carries `product_id` (feed it to `get_product`, or to `create_checkout` as `line_items[0].product_id`), `display_price_cents` with `formatted_price`, `available`, `transaction_mode`, and the source disclosure — under `concise` that is `source_retailer` and `price_may_differ`; under `detailed` it is the full `source` object with `retailer`, `url`, `price_may_differ` and `last_checked_at`. `get_product` is where the source retailer's own price is disclosed alongside the displayed price.",
-      "Error recovery: `product_not_found` or `out_of_stock` means the listing is gone, so `listings` comes back empty and the message says why; `price_not_fresh` means no validated source snapshot exists, so retry in a minute; `rate_limited` means the published public-read budget is spent, so wait 60 seconds; `network_error` means the request never reached the store, so call this tool again.",
-    ].join("\n\n"),
+    description: "Returns the Robodepo demo catalogue as listings with product id, title, availability, the disclosed source retailer and price in AUD integer cents. Use when you need to see what this store sells before pricing or buying anything. Not for one product's full record; use get_product. Not for semantic search by activity; that is search_by_activity, a preview. Full guide: get_tool_guide or /agent/tools.json#search_catalog",
+    guide: {
+      "summary": "Returns the Robodepo demo catalogue as listings, each with its product id, title, variant, availability, the disclosed source retailer, and the displayed price as AUD integer cents plus a formatted string such as A$113.85.",
+      "use_when": "Use this when you want to see what this store actually sells before you price or buy anything.",
+      "do_not_use": "Do not use this for the full record of one product; use `get_product` instead. Do not use it for semantic search by activity or function; that is `search_by_activity`, which is a preview and does not work yet.",
+      "parameters": "The `query` parameter is recorded and returned to you unchanged. The demo catalogue holds exactly one product, so this tool does not rank, filter or keyword-match anything: deciding whether the returned listing answers the query is your judgement, not the store's. `limit` bounds how many listings come back, and `response_format` chooses how much of the source disclosure travels with each one.",
+      "caveats": "It returns no shipping cost, no delivery estimate, no reviews and no evidence pack. It holds no handle, takes no lock and reserves no stock, so calling it twice changes nothing.",
+      "outputs": "`resource.catalogue_size` states how many products the demo catalogue holds. Each entry in `resource.listings[]` carries `product_id` (feed it to `get_product`, or to `create_checkout` as `line_items[0].product_id`), `display_price_cents` with `formatted_price`, `available`, `transaction_mode`, and the source disclosure — under `concise` that is `source_retailer` and `price_may_differ`; under `detailed` it is the full `source` object with `retailer`, `url`, `price_may_differ` and `last_checked_at`. `get_product` is where the source retailer's own price is disclosed alongside the displayed price.",
+      "error_recovery": "`product_not_found` or `out_of_stock` means the listing is gone, so `listings` comes back empty and the message says why; `price_not_fresh` means no validated source snapshot exists, so retry in a minute; `rate_limited` means the published public-read budget is spent, so wait 60 seconds; `network_error` means the request never reached the store, so call this tool again.",
+      "examples": [
+        {
+          "title": "See the demo catalogue",
+          "input": {
+            "query": "a sun hat for a boat",
+            "limit": 5,
+            "response_format": "concise"
+          }
+        }
+      ]
+    },
     annotations: {
-      readOnlyHint: true,
-      untrustedContentHint: true,
-      destructiveHint: false,
-      idempotentHint: true,
-      openWorldHint: false,
+      "readOnlyHint": true,
+      "untrustedContentHint": true,
+      "destructiveHint": false,
+      "idempotentHint": true,
+      "openWorldHint": false
     },
     inputSchema: {
-      type: "object",
-      properties: {
-        query: {
-          type: "string",
-          minLength: 1,
-          maxLength: 300,
-          description:
-            "What the person is looking for, in their own words. Returned to you unchanged; the store does not rank against it.",
+      "type": "object",
+      "properties": {
+        "query": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 300,
+          "description": "What the person is looking for, in their own words. Returned to you unchanged; the store does not rank against it."
         },
-        limit: {
-          type: "integer",
-          minimum: 1,
-          maximum: 20,
-          description:
-            "Maximum listings to return. The demo catalogue holds one product, so any value from 1 to 20 returns the same single listing.",
+        "limit": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 20,
+          "description": "Maximum listings to return. The demo catalogue holds one product, so any value from 1 to 20 returns the same single listing."
         },
-        response_format: RESPONSE_FORMAT_PROPERTY,
+        "response_format": RESPONSE_FORMAT_PROPERTY
       },
-      required: ["query", "limit", "response_format"],
-      additionalProperties: false,
+      "required": [
+        "query",
+        "limit",
+        "response_format"
+      ],
+      "additionalProperties": false
     },
   },
   {
     name: "get_product",
     title: "Read one product record",
     kind: "operational",
-    description: [
-      "Returns every published field for one product: title, variant, availability, the source retailer's price and Robodepo's displayed price, both as AUD integer cents, plus a formatted price string such as A$113.85 and the source disclosure.",
-      "Use this when you hold a `product_id` from `search_catalog` and want the full record, including the price disclosure, before pricing a checkout. Do not use this for browsing the whole catalogue; use `search_catalog` instead. Do not use it for cited evidence from manuals, reviews or guides; that is `get_evidence_pack`, which is a preview and does not work yet.",
-      "`product_id` comes from `search_catalog`. The demo catalogue's only product id is `holiday-bucket-beige-canvas-l-xl-beige`, and any other id is refused rather than guessed at. `response_format` chooses how much of the source disclosure comes back: `concise` for the retailer's name and the price-may-differ flag, `detailed` for the whole `source` block.",
-      "It returns no shipping cost, no delivery estimate and no stock count. It reads a stored snapshot, holds no handle and places no reservation, so the price it shows can still move before you create a checkout.",
-      "Outputs: `resource.product_id` feeds `create_checkout` as `line_items[0].product_id`. `resource.source_price_cents` and `resource.display_price_cents` are both returned: the displayed price sits above the source retailer's price, and Robodepo publishes both rather than hiding the difference. Under `detailed`, `resource.source.retailer`, `resource.source.url` and `resource.source.last_checked_at` say where the item comes from and when it was last read, and `resource.source.price_may_differ` warns that the retailer's own price can move; under `concise` that block is replaced by `resource.source_retailer` and `resource.price_may_differ`, so the disclosure is shortened but never dropped.",
-      "Error recovery: `product_not_found` means that id is not in this catalogue, so call `search_catalog`; `out_of_stock` means the source variant is unavailable, so call `search_catalog` and tell the person; `price_not_fresh` means no validated snapshot exists, so retry in a minute; `rate_limited` means the public-read budget is spent, so wait 60 seconds; `network_error` means the request never left the browser, so call this tool again.",
-    ].join("\n\n"),
+    description: "Returns one product's published record: title, variant, availability, the source retailer's price and Robodepo's displayed price, both in AUD integer cents. Use when you hold a product_id and want the full record and price disclosure. Not for browsing the catalogue; use search_catalog. Not for cited evidence; that is get_evidence_pack, a preview. Full guide: get_tool_guide or /agent/tools.json#get_product",
+    guide: {
+      "summary": "Returns every published field for one product: title, variant, availability, the source retailer's price and Robodepo's displayed price, both as AUD integer cents, plus a formatted price string such as A$113.85 and the source disclosure.",
+      "use_when": "Use this when you hold a `product_id` from `search_catalog` and want the full record, including the price disclosure, before pricing a checkout.",
+      "do_not_use": "Do not use this for browsing the whole catalogue; use `search_catalog` instead. Do not use it for cited evidence from manuals, reviews or guides; that is `get_evidence_pack`, which is a preview and does not work yet.",
+      "parameters": "`product_id` comes from `search_catalog`. The demo catalogue's only product id is `holiday-bucket-beige-canvas-l-xl-beige`, and any other id is refused rather than guessed at. `response_format` chooses how much of the source disclosure comes back: `concise` for the retailer's name and the price-may-differ flag, `detailed` for the whole `source` block.",
+      "caveats": "It returns no shipping cost, no delivery estimate and no stock count. It reads a stored snapshot, holds no handle and places no reservation, so the price it shows can still move before you create a checkout.",
+      "outputs": "`resource.product_id` feeds `create_checkout` as `line_items[0].product_id`. `resource.source_price_cents` and `resource.display_price_cents` are both returned: the displayed price sits above the source retailer's price, and Robodepo publishes both rather than hiding the difference. Under `detailed`, `resource.source.retailer`, `resource.source.url` and `resource.source.last_checked_at` say where the item comes from and when it was last read, and `resource.source.price_may_differ` warns that the retailer's own price can move; under `concise` that block is replaced by `resource.source_retailer` and `resource.price_may_differ`, so the disclosure is shortened but never dropped.",
+      "error_recovery": "`product_not_found` means that id is not in this catalogue, so call `search_catalog`; `out_of_stock` means the source variant is unavailable, so call `search_catalog` and tell the person; `price_not_fresh` means no validated snapshot exists, so retry in a minute; `rate_limited` means the public-read budget is spent, so wait 60 seconds; `network_error` means the request never left the browser, so call this tool again.",
+      "examples": [
+        {
+          "title": "Read the demo product with the full source block",
+          "input": {
+            "product_id": "holiday-bucket-beige-canvas-l-xl-beige",
+            "response_format": "detailed"
+          }
+        }
+      ]
+    },
     annotations: {
-      readOnlyHint: true,
-      untrustedContentHint: true,
-      destructiveHint: false,
-      idempotentHint: true,
-      openWorldHint: false,
+      "readOnlyHint": true,
+      "untrustedContentHint": true,
+      "destructiveHint": false,
+      "idempotentHint": true,
+      "openWorldHint": false
     },
     inputSchema: {
-      type: "object",
-      properties: {
-        product_id: {
-          type: "string",
-          minLength: 1,
-          maxLength: 200,
-          description:
-            "The product id returned by `search_catalog`. The demo catalogue's only value is `holiday-bucket-beige-canvas-l-xl-beige`.",
+      "type": "object",
+      "properties": {
+        "product_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 200,
+          "description": "The product id returned by `search_catalog`. The demo catalogue's only value is `holiday-bucket-beige-canvas-l-xl-beige`."
         },
-        response_format: RESPONSE_FORMAT_PROPERTY,
+        "response_format": RESPONSE_FORMAT_PROPERTY
       },
-      required: ["product_id", "response_format"],
-      additionalProperties: false,
+      "required": [
+        "product_id",
+        "response_format"
+      ],
+      "additionalProperties": false
     },
   },
   {
     name: "create_checkout",
     title: "Price a checkout and prepare the human confirmation",
     kind: "operational",
-    description: [
-      "Runs the entire pre-purchase path in one call — cart, item, address, shipping quote and purchase mandate — and returns a priced checkout in AUD integer cents with a `confirmation_url` the person opens to place the sandbox order.",
-      "Use this when the person has chosen the product and you are ready to show them a final delivered price to approve. Do not use this for placing the order; there is no tool that places it, because the one irreversible step belongs to the person on Robodepo's own pages. Do not use it to read an order afterwards; use `get_order` instead, and use `cancel_checkout` if the person declines.",
-      "`line_items[0].product_id` comes from `search_catalog` or `get_product`, and `quantity` must be 1 because the tracer supports no other quantity. `shipping_address` must be the published sandbox address exactly — recipient_name \"Sandbox Buyer\", line1 \"10 Example Street\", line2 null, suburb \"Wembley Downs\", state \"WA\", postcode \"6019\", country \"AU\" — and any other address is refused here, before any request is sent, with the accepted value named in the message. `budget_ceiling_cents` is the person's stated ceiling: exceeding it does not block the checkout, it adds a `budget_exceeded` warning for the person to review. `idempotency_key` may be null, in which case the tool generates one; supplied keys must be 16 to 128 printable ASCII characters and are suffixed per step so a repeat is safe.",
-      "It returns no payment details, no Stripe object, no cookie value and no full address — only the delivery region, such as WA 6019. The checkout expires 15 minutes after it is created and cannot be confirmed after that; the run authority that owns it is a browser cookie that lives 24 hours and follows the most recent checkout, so a checkout created in one browser cannot be confirmed or read in another. Shipping is the flat A$12.00 standard sandbox rate. The order is a Stripe test-mode payment: nothing is charged, no retailer order is placed and nothing is shipped.",
-      "Outputs: `resource.checkout_id` feeds `cancel_checkout` and `get_order`. `resource.confirmation_url` is the link to hand the person: Robodepo's approval page, which shows the item, variant, delivery region and total and takes one biometric touch — a fingerprint, face unlock or device passkey prompt — where the browser has one, and a plain single button where it does not. That gesture is checked by the browser and never reaches Robodepo; it adds no server-side authority, and the server still verifies the same run cookie, confirmation cookie, single-use CSRF value, server-issued single-use idempotency key, same-origin submission and five-minute session it always has. No tool can submit either page. `links[]` carries that link as `approval_page` and the plain confirmation page as `confirmation_page`, for a person who would rather use the button alone. `resource.totals` carries `items_cents`, `shipping_cents`, `total_cents`, `currency` and `formatted_total`; `resource.expires_at` is when the checkout dies; `resource.delivery_region`, `resource.source_retailer` and `resource.price_may_differ` are the disclosures to relay. `instructions.for_human` is ready-made wording to pass on and `instructions.for_agent` is your own next step.",
-      "Error recovery: `invalid_request` names the field to fix, then call this tool again; `run_authority_missing` means this browser lost its run cookie, so call this tool again to get a new one; `checkout_expired_or_invalid_state` means the 15 minutes ran out, so call this tool again; `quote_expired` means the shipping quote went stale, so call this tool again; `out_of_stock` means the source variant went unavailable, so tell the person and call `search_catalog`; `idempotency_conflict` means the key is already bound elsewhere, so retry with a new `idempotency_key` or null; `rate_limited` means the cart budget of 10 per hour is spent, so wait 60 seconds; `price_not_fresh` means no validated snapshot exists, so retry in a minute; `payment_unavailable` cannot be retried into a success, so call `submit_feedback`; `network_error` means the step never reached the store, so call this tool again. Every error names the step that failed.",
-    ].join("\n\n"),
+    description: "Runs the whole pre-purchase path in one call (cart, item, address, shipping quote, mandate) and returns a priced checkout in AUD integer cents plus the link the person opens to approve it. Use when the person has chosen the product and you are ready to show a final delivered price. Not for placing the order; no tool can, the person approves on Robodepo's own page. Full guide: get_tool_guide or /agent/tools.json#create_checkout",
+    guide: {
+      "summary": "Runs the entire pre-purchase path in one call — cart, item, address, shipping quote and purchase mandate — and returns a priced checkout in AUD integer cents with a `confirmation_url` the person opens to place the sandbox order.",
+      "use_when": "Use this when the person has chosen the product and you are ready to show them a final delivered price to approve.",
+      "do_not_use": "Do not use this for placing the order; there is no tool that places it, because the one irreversible step belongs to the person on Robodepo's own pages. Do not use it to read an order afterwards; use `get_order` instead, and use `cancel_checkout` if the person declines.",
+      "parameters": "`line_items[0].product_id` comes from `search_catalog` or `get_product`, and `quantity` must be 1 because the tracer supports no other quantity. `shipping_address` must be the published sandbox address exactly — recipient_name \"Sandbox Buyer\", line1 \"10 Example Street\", line2 null, suburb \"Wembley Downs\", state \"WA\", postcode \"6019\", country \"AU\" — and any other address is refused here, before any request is sent, with the accepted value named in the message. `budget_ceiling_cents` is the person's stated ceiling: exceeding it does not block the checkout, it adds a `budget_exceeded` warning for the person to review. `idempotency_key` may be null, in which case the tool generates one; supplied keys must be 16 to 128 printable ASCII characters and are suffixed per step so a repeat is safe.",
+      "caveats": "It returns no payment details, no Stripe object, no cookie value and no full address — only the delivery region, such as WA 6019. The checkout expires 15 minutes after it is created and cannot be confirmed after that; the run authority that owns it is a browser cookie that lives 24 hours and follows the most recent checkout, so a checkout created in one browser cannot be confirmed or read in another. Shipping is the flat A$12.00 standard sandbox rate. The order is a Stripe test-mode payment: nothing is charged, no retailer order is placed and nothing is shipped.",
+      "outputs": "`resource.checkout_id` feeds `cancel_checkout` and `get_order`. `resource.confirmation_url` is the link to hand the person: Robodepo's approval page, which shows the item, variant, delivery region and total and takes one biometric touch — a fingerprint, face unlock or device passkey prompt — where the browser has one, and a plain single button where it does not. That gesture is checked by the browser and never reaches Robodepo; it adds no server-side authority, and the server still verifies the same run cookie, confirmation cookie, single-use CSRF value, server-issued single-use idempotency key, same-origin submission and five-minute session it always has. No tool can submit either page. `links[]` carries that link as `approval_page` and the plain confirmation page as `confirmation_page`, for a person who would rather use the button alone. `resource.totals` carries `items_cents`, `shipping_cents`, `total_cents`, `currency` and `formatted_total`; `resource.expires_at` is when the checkout dies; `resource.delivery_region`, `resource.source_retailer` and `resource.price_may_differ` are the disclosures to relay. `instructions.for_human` is ready-made wording to pass on and `instructions.for_agent` is your own next step.",
+      "error_recovery": "`invalid_request` names the field to fix, then call this tool again; `run_authority_missing` means this browser lost its run cookie, so call this tool again to get a new one; `checkout_expired_or_invalid_state` means the 15 minutes ran out, so call this tool again; `quote_expired` means the shipping quote went stale, so call this tool again; `out_of_stock` means the source variant went unavailable, so tell the person and call `search_catalog`; `idempotency_conflict` means the key is already bound elsewhere, so retry with a new `idempotency_key` or null; `rate_limited` means the cart budget of 10 per hour is spent, so wait 60 seconds; `price_not_fresh` means no validated snapshot exists, so retry in a minute; `payment_unavailable` cannot be retried into a success, so call `submit_feedback`; `network_error` means the step never reached the store, so call this tool again. Every error names the step that failed.",
+      "examples": [
+        {
+          "title": "Price the one buyable order",
+          "input": {
+            "line_items": [
+              {
+                "product_id": "holiday-bucket-beige-canvas-l-xl-beige",
+                "quantity": 1
+              }
+            ],
+            "shipping_address": {
+              "recipient_name": "Sandbox Buyer",
+              "line1": "10 Example Street",
+              "line2": null,
+              "suburb": "Wembley Downs",
+              "state": "WA",
+              "postcode": "6019",
+              "country": "AU"
+            },
+            "budget_ceiling_cents": null,
+            "idempotency_key": null
+          }
+        }
+      ]
+    },
     annotations: {
-      readOnlyHint: false,
-      untrustedContentHint: false,
-      destructiveHint: false,
-      idempotentHint: true,
-      openWorldHint: false,
+      "readOnlyHint": false,
+      "untrustedContentHint": false,
+      "destructiveHint": false,
+      "idempotentHint": true,
+      "openWorldHint": false
     },
     inputSchema: {
-      type: "object",
-      properties: {
-        line_items: {
-          type: "array",
-          minItems: 1,
-          maxItems: 1,
-          description:
-            "Exactly one line item. The tracer supports a single product at quantity 1 and refuses anything else.",
-          items: {
-            type: "object",
-            properties: {
-              product_id: {
-                type: "string",
-                minLength: 1,
-                maxLength: 200,
-                description:
-                  "The product id from `search_catalog` or `get_product`. The demo catalogue's only value is `holiday-bucket-beige-canvas-l-xl-beige`.",
+      "type": "object",
+      "properties": {
+        "line_items": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 1,
+          "description": "Exactly one line item. The tracer supports a single product at quantity 1 and refuses anything else.",
+          "items": {
+            "type": "object",
+            "properties": {
+              "product_id": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 200,
+                "description": "The product id from `search_catalog` or `get_product`. The demo catalogue's only value is `holiday-bucket-beige-canvas-l-xl-beige`."
               },
-              quantity: {
-                type: "integer",
-                minimum: 1,
-                maximum: 1,
-                description: "Must be 1. The tracer supports no other quantity.",
-              },
+              "quantity": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 1,
+                "description": "Must be 1. The tracer supports no other quantity."
+              }
             },
-            required: ["product_id", "quantity"],
-            additionalProperties: false,
-          },
+            "required": [
+              "product_id",
+              "quantity"
+            ],
+            "additionalProperties": false
+          }
         },
-        shipping_address: {
-          type: "object",
-          description:
-            "Must equal the published sandbox address exactly, field for field. No real address is ever accepted here.",
-          properties: {
-            recipient_name: {
-              type: "string",
-              description: 'The accepted sandbox value is "Sandbox Buyer".',
+        "shipping_address": {
+          "type": "object",
+          "description": "Must equal the published sandbox address exactly, field for field. No real address is ever accepted here.",
+          "properties": {
+            "recipient_name": {
+              "type": "string",
+              "description": "The accepted sandbox value is \"Sandbox Buyer\"."
             },
-            line1: {
-              type: "string",
-              description: 'The accepted sandbox value is "10 Example Street".',
+            "line1": {
+              "type": "string",
+              "description": "The accepted sandbox value is \"10 Example Street\"."
             },
-            line2: {
-              type: ["string", "null"],
-              description: "The accepted sandbox value is null.",
+            "line2": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "description": "The accepted sandbox value is null."
             },
-            suburb: {
-              type: "string",
-              description: 'The accepted sandbox value is "Wembley Downs".',
+            "suburb": {
+              "type": "string",
+              "description": "The accepted sandbox value is \"Wembley Downs\"."
             },
-            state: { type: "string", description: 'The accepted sandbox value is "WA".' },
-            postcode: {
-              type: "string",
-              description: 'The accepted sandbox value is "6019".',
+            "state": {
+              "type": "string",
+              "description": "The accepted sandbox value is \"WA\"."
             },
-            country: { type: "string", description: 'The accepted sandbox value is "AU".' },
+            "postcode": {
+              "type": "string",
+              "description": "The accepted sandbox value is \"6019\"."
+            },
+            "country": {
+              "type": "string",
+              "description": "The accepted sandbox value is \"AU\"."
+            }
           },
-          required: [
+          "required": [
             "recipient_name",
             "line1",
             "line2",
             "suburb",
             "state",
             "postcode",
-            "country",
+            "country"
           ],
-          additionalProperties: false,
+          "additionalProperties": false
         },
-        budget_ceiling_cents: {
-          type: ["integer", "null"],
-          minimum: 0,
-          description:
-            "The person's stated ceiling in AUD integer cents, or null. Exceeding it returns a `budget_exceeded` warning for the person to review; it does not block the checkout.",
+        "budget_ceiling_cents": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 0,
+          "description": "The person's ceiling in AUD integer cents, or null. Exceeding it adds a budget_exceeded warning to review; it does not block the checkout."
         },
-        idempotency_key: {
-          type: ["string", "null"],
-          minLength: 16,
-          maxLength: 128,
-          description:
-            "16 to 128 printable ASCII characters, or null to have the tool generate one. Each internal step gets its own suffixed key, so repeating a failed call is safe.",
-        },
+        "idempotency_key": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "minLength": 16,
+          "maxLength": 128,
+          "description": "16 to 128 printable ASCII characters, or null to have the tool generate one. Each internal step gets its own suffixed key, so a repeat is safe."
+        }
       },
-      required: ["line_items", "shipping_address", "budget_ceiling_cents", "idempotency_key"],
-      additionalProperties: false,
+      "required": [
+        "line_items",
+        "shipping_address",
+        "budget_ceiling_cents",
+        "idempotency_key"
+      ],
+      "additionalProperties": false
     },
   },
   {
     name: "cancel_checkout",
     title: "Decline a prepared checkout on the record",
     kind: "operational",
-    description: [
-      "Marks a checkout prepared in this browser as declined, records the decline with Robodepo, and returns `status: \"canceled\"` so a correct refusal is a recorded outcome rather than something inferred from silence.",
-      "Use this when the person decides not to buy, or when you decide the checkout should not proceed — a price above their ceiling, a wrong item, a change of mind. Do not use this for releasing stock or reversing a payment; nothing is held and nothing is charged. Do not use it after the person has confirmed; at that point call `get_order` instead, and use `submit_feedback` to say what went wrong.",
-      "`checkout_id` is the value `create_checkout` returned. `reason` is optional free text of up to 300 characters and should carry no personal data.",
-      "Told plainly: the v1 API has no server-side cancel route, so this tool does not call one. The sandbox mandate simply expires within 15 minutes of creation and cannot be confirmed from this page afterwards. What this tool really does is close the checkout in this page's own registry so the tools stop offering it, and record the decline so the outcome is explicit. It changes nothing on the server and is safe to call more than once.",
-      "Outputs: `resource.checkout_id` and `resource.state` confirm which checkout was closed, and `resource.declined_at` is when. `resource.feedback_recorded` says whether the decline reached the feedback endpoint; when it did not, a warning explains and the cancel still stands. `next_actions` will point you back at `search_catalog` and `submit_feedback`.",
-      "Error recovery: `not_found` means this browser never prepared that checkout — checkouts are per-browser and per-page — so call `create_checkout` to make one; `network_error` means the decline record did not reach the store, which is reported as a warning rather than a failure, because the cancel itself is local and already done.",
-    ].join("\n\n"),
+    description: "Closes a checkout prepared in this browser and records the decline, returning status canceled. Use when the person declines, so a refusal is a recorded outcome rather than an inferred one. Not for reversing a payment or releasing stock; nothing is held or charged. Not for after approval; use get_order. Full guide: get_tool_guide or /agent/tools.json#cancel_checkout",
+    guide: {
+      "summary": "Marks a checkout prepared in this browser as declined, records the decline with Robodepo, and returns `status: \"canceled\"` so a correct refusal is a recorded outcome rather than something inferred from silence.",
+      "use_when": "Use this when the person decides not to buy, or when you decide the checkout should not proceed — a price above their ceiling, a wrong item, a change of mind.",
+      "do_not_use": "Do not use this for releasing stock or reversing a payment; nothing is held and nothing is charged. Do not use it after the person has confirmed; at that point call `get_order` instead, and use `submit_feedback` to say what went wrong.",
+      "parameters": "`checkout_id` is the value `create_checkout` returned. `reason` is optional free text of up to 300 characters and should carry no personal data.",
+      "caveats": "Told plainly: the v1 API has no server-side cancel route, so this tool does not call one. The sandbox mandate simply expires within 15 minutes of creation and cannot be confirmed from this page afterwards. What this tool really does is close the checkout in this page's own registry so the tools stop offering it, and record the decline so the outcome is explicit. It changes nothing on the server and is safe to call more than once.",
+      "outputs": "`resource.checkout_id` and `resource.state` confirm which checkout was closed, and `resource.declined_at` is when. `resource.feedback_recorded` says whether the decline reached the feedback endpoint; when it did not, a warning explains and the cancel still stands. `next_actions` will point you back at `search_catalog` and `submit_feedback`.",
+      "error_recovery": "`not_found` means this browser never prepared that checkout — checkouts are per-browser and per-page — so call `create_checkout` to make one; `network_error` means the decline record did not reach the store, which is reported as a warning rather than a failure, because the cancel itself is local and already done.",
+      "examples": [
+        {
+          "title": "Decline on the record",
+          "input": {
+            "checkout_id": "the checkout_id create_checkout returned",
+            "reason": "Above the person's ceiling"
+          }
+        }
+      ]
+    },
     annotations: {
-      readOnlyHint: false,
-      untrustedContentHint: false,
-      destructiveHint: true,
-      idempotentHint: true,
-      openWorldHint: false,
+      "readOnlyHint": false,
+      "untrustedContentHint": false,
+      "destructiveHint": true,
+      "idempotentHint": true,
+      "openWorldHint": false
     },
     inputSchema: {
-      type: "object",
-      properties: {
-        checkout_id: {
-          type: "string",
-          minLength: 1,
-          maxLength: 200,
-          description: "The `checkout_id` returned by `create_checkout` in this browser.",
+      "type": "object",
+      "properties": {
+        "checkout_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 200,
+          "description": "The `checkout_id` returned by `create_checkout` in this browser."
         },
-        reason: {
-          type: ["string", "null"],
-          maxLength: 300,
-          description:
-            "Why the checkout was declined, or null. Free text up to 300 characters; do not put personal data here.",
-        },
+        "reason": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "maxLength": 300,
+          "description": "Why the checkout was declined, or null. Free text up to 300 characters; do not put personal data here."
+        }
       },
-      required: ["checkout_id", "reason"],
-      additionalProperties: false,
+      "required": [
+        "checkout_id",
+        "reason"
+      ],
+      "additionalProperties": false
     },
   },
   {
     name: "get_order",
     title: "Read back a confirmed sandbox order",
     kind: "operational",
-    description: [
-      "Reads a confirmed sandbox order and returns its status, item, quantity, delivery region and totals in AUD integer cents with a formatted total such as A$125.85.",
-      "Use this when the person has pressed confirm on Robodepo's confirmation page and you want to check the order really exists and read it back to them. Do not use this for confirming the order; no tool can, the person does that themselves, and to price something use `create_checkout` instead.",
-      "Supply at least one of `order_id` or `checkout_id`; both may not be null. `order_id` comes from the order page the person lands on after confirming, at `/orders/{order_id}`. `checkout_id` comes from `create_checkout`, and when you pass it this tool checks whether the window this page opened has reached an order page — either the approval page or the plain confirmation page redirects there — so you can poll politely while the person decides.",
-      "It returns no payment details, no Stripe object and no full address — the delivery region, such as WA 6019, is the most it gives. An order can only be read from the browser whose run created it. If the person has not confirmed yet, this is not an error: you get `status: \"awaiting_human_confirmation\"` and the confirmation link to hand them again.",
-      "Outputs: `resource.order_id`, `resource.status`, `resource.item` (product_id, title, variant, quantity, unit_price_cents), `resource.shipping_cents`, `resource.total_cents` with `formatted_total`, `resource.delivery_region` and `resource.created_at`. `links[]` carries the human-readable `order_page`. `instructions.for_human` is wording you can read out.",
-      "Error recovery: `not_found` means no order with that id exists in this browser's run, and because an order is readable only from the browser whose run created it, creating another checkout will not surface it — report it with `submit_feedback` if the person did confirm, then start again from `search_catalog`; `run_authority_missing` means this browser lost the run authority that owns the order, and a new checkout issues a new run rather than recovering the old one, so no retry reaches it and `submit_feedback` is the honest next step; `rate_limited` means the run read budget is spent, so wait 60 seconds and call this tool again; `network_error` means the request never reached the store, so call this tool again.",
-    ].join("\n\n"),
+    description: "Reads back a confirmed sandbox order: status, item, quantity, delivery region and totals in AUD integer cents. Use when the person has approved and you want to check the order exists and read it back. Pass order_id or checkout_id. Not for confirming the order; no tool can. Not for pricing; use create_checkout. Full guide: get_tool_guide or /agent/tools.json#get_order",
+    guide: {
+      "summary": "Reads a confirmed sandbox order and returns its status, item, quantity, delivery region and totals in AUD integer cents with a formatted total such as A$125.85.",
+      "use_when": "Use this when the person has pressed confirm on Robodepo's confirmation page and you want to check the order really exists and read it back to them.",
+      "do_not_use": "Do not use this for confirming the order; no tool can, the person does that themselves, and to price something use `create_checkout` instead.",
+      "parameters": "Supply at least one of `order_id` or `checkout_id`; both may not be null. `order_id` comes from the order page the person lands on after confirming, at `/orders/{order_id}`. `checkout_id` comes from `create_checkout`, and when you pass it this tool checks whether the window this page opened has reached an order page — either the approval page or the plain confirmation page redirects there — so you can poll politely while the person decides.",
+      "caveats": "It returns no payment details, no Stripe object and no full address — the delivery region, such as WA 6019, is the most it gives. An order can only be read from the browser whose run created it. If the person has not confirmed yet, this is not an error: you get `status: \"awaiting_human_confirmation\"` and the confirmation link to hand them again.",
+      "outputs": "`resource.order_id`, `resource.status`, `resource.item` (product_id, title, variant, quantity, unit_price_cents), `resource.shipping_cents`, `resource.total_cents` with `formatted_total`, `resource.delivery_region` and `resource.created_at`. `links[]` carries the human-readable `order_page`. `instructions.for_human` is wording you can read out.",
+      "error_recovery": "`not_found` means no order with that id exists in this browser's run, and because an order is readable only from the browser whose run created it, creating another checkout will not surface it — report it with `submit_feedback` if the person did confirm, then start again from `search_catalog`; `run_authority_missing` means this browser lost the run authority that owns the order, and a new checkout issues a new run rather than recovering the old one, so no retry reaches it and `submit_feedback` is the honest next step; `rate_limited` means the run read budget is spent, so wait 60 seconds and call this tool again; `network_error` means the request never reached the store, so call this tool again.",
+      "examples": [
+        {
+          "title": "Poll while the person decides",
+          "input": {
+            "order_id": null,
+            "checkout_id": "the checkout_id create_checkout returned"
+          }
+        },
+        {
+          "title": "Read back a confirmed order",
+          "input": {
+            "order_id": "the id in /orders/{order_id}",
+            "checkout_id": null
+          }
+        }
+      ]
+    },
     annotations: {
-      readOnlyHint: true,
-      untrustedContentHint: false,
-      destructiveHint: false,
-      idempotentHint: true,
-      openWorldHint: false,
+      "readOnlyHint": true,
+      "untrustedContentHint": false,
+      "destructiveHint": false,
+      "idempotentHint": true,
+      "openWorldHint": false
     },
     inputSchema: {
-      type: "object",
-      properties: {
-        order_id: {
-          type: ["string", "null"],
-          maxLength: 200,
-          description:
-            "The order id from `/orders/{order_id}` after the person confirms, or null to look it up from `checkout_id`.",
+      "type": "object",
+      "properties": {
+        "order_id": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "maxLength": 200,
+          "description": "The order id from `/orders/{order_id}` after the person confirms, or null to look it up from `checkout_id`."
         },
-        checkout_id: {
-          type: ["string", "null"],
-          maxLength: 200,
-          description:
-            "The `checkout_id` from `create_checkout`, or null when you already hold `order_id`. At least one of the two must be non-null.",
-        },
+        "checkout_id": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "maxLength": 200,
+          "description": "The `checkout_id` from `create_checkout`, or null when you already hold `order_id`. At least one of the two must be non-null."
+        }
       },
-      required: ["order_id", "checkout_id"],
-      additionalProperties: false,
+      "required": [
+        "order_id",
+        "checkout_id"
+      ],
+      "additionalProperties": false
     },
   },
   {
     name: "get_trust_manifest",
     title: "Read Robodepo's trust manifest",
     kind: "operational",
-    description: [
-      "Fetches Robodepo's machine-readable trust manifest and returns it whole: what the service is, that it is a sandbox, which capabilities it does not have, how its checkout contract works, and what statistics it publishes.",
-      "Use this when you or the person want to check what this store claims about itself before transacting, or when you need the published purchase sequence, observable states and safe error codes in one document. Do not use this for product facts or prices; use `get_product` instead, and do not use it as a substitute for reading the checkout you actually created.",
-      "It takes no parameters and no ids. It is a public read that changes nothing and can be called at any time.",
-      "The three sandbox booleans are the capabilities Robodepo does not have: no real charge, no source retailer order, no fulfilment. The manifest's `statistics.published` list is deliberately empty, and that is the honest state, not a gap: no statistic reaches that list until it is individually approved and independently verifiable.",
-      "Outputs: `resource.manifest` is the document as served, including `manifest.sandbox` (the three capability booleans), `manifest.checkout` (api_version, discovery_url, product_url, confirmation_url_template, sequence, states, safe_errors) and `manifest.statistics`. `links[]` carries `trust_manifest`.",
-      "Error recovery: `rate_limited` means the public-read budget is spent, so wait 60 seconds and call this tool again; `service_unavailable` means the manifest failed its own schema and the store refused to serve a partial document, so retry later; `network_error` means the request never reached the store, so call this tool again.",
-    ].join("\n\n"),
+    description: "Returns Robodepo's trust manifest whole: what the service is, that it is a sandbox, the capabilities it does not have, its checkout contract and its published statistics. Use when you want to check what this store claims about itself. Takes no parameters. Not for product facts or prices; use get_product. Full guide: get_tool_guide or /agent/tools.json#get_trust_manifest",
+    guide: {
+      "summary": "Fetches Robodepo's machine-readable trust manifest and returns it whole: what the service is, that it is a sandbox, which capabilities it does not have, how its checkout contract works, and what statistics it publishes.",
+      "use_when": "Use this when you or the person want to check what this store claims about itself before transacting, or when you need the published purchase sequence, observable states and safe error codes in one document.",
+      "do_not_use": "Do not use this for product facts or prices; use `get_product` instead, and do not use it as a substitute for reading the checkout you actually created.",
+      "parameters": "It takes no parameters and no ids. It is a public read that changes nothing and can be called at any time.",
+      "caveats": "The three sandbox booleans are the capabilities Robodepo does not have: no real charge, no source retailer order, no fulfilment. The manifest's `statistics.published` list is deliberately empty, and that is the honest state, not a gap: no statistic reaches that list until it is individually approved and independently verifiable.",
+      "outputs": "`resource.manifest` is the document as served, including `manifest.sandbox` (the three capability booleans), `manifest.checkout` (api_version, discovery_url, product_url, confirmation_url_template, sequence, states, safe_errors) and `manifest.statistics`. `links[]` carries `trust_manifest`.",
+      "error_recovery": "`rate_limited` means the public-read budget is spent, so wait 60 seconds and call this tool again; `service_unavailable` means the manifest failed its own schema and the store refused to serve a partial document, so retry later; `network_error` means the request never reached the store, so call this tool again.",
+      "examples": [
+        {
+          "title": "Read what the store claims about itself",
+          "input": {}
+        }
+      ]
+    },
     annotations: {
-      readOnlyHint: true,
-      untrustedContentHint: false,
-      destructiveHint: false,
-      idempotentHint: true,
-      openWorldHint: false,
+      "readOnlyHint": true,
+      "untrustedContentHint": false,
+      "destructiveHint": false,
+      "idempotentHint": true,
+      "openWorldHint": false
     },
     inputSchema: {
-      type: "object",
-      properties: {},
-      required: [],
-      additionalProperties: false,
+      "type": "object",
+      "properties": {},
+      "required": [],
+      "additionalProperties": false
     },
   },
   {
     name: "submit_feedback",
     title: "Tell Robodepo what worked and what did not",
     kind: "operational",
-    description: [
-      "Sends structured feedback about this store to Robodepo and returns an acknowledgement with a `feedback_id` and the time it was received.",
-      "Use this when something about the store was unclear, missing or wrong, at any point — mid-checkout, after an order, after a decline, or after an error you could not recover from. Do not use this for cancelling a checkout; use `cancel_checkout` instead, which records the decline itself. Do not use it to ask a question and expect an answer: nothing replies.",
-      "`context.checkout_id` and `context.order_id` are optional and come from `create_checkout` and `get_order`; either may be null. `sentiment` is one of positive, neutral or negative. `free_text` is up to 1000 characters. `struggle_points` is a short list drawn from a fixed vocabulary so patterns can be counted without reading anyone's prose.",
-      "Feedback is never required and never blocks a purchase. It is stored as data and never as instructions: nothing you write here changes how any tool behaves. Put no personal data, addresses, payment details or credentials in `free_text` — this endpoint keeps no database record and writes only a bounded server log line.",
-      "Outputs: `resource.feedback_id` and `resource.received_at` acknowledge receipt, and `resource.stored_as` says how it was kept. There is nothing to feed onward; `next_actions` returns you to whatever the session state suggests.",
-      "Error recovery: `invalid_request` means a field is outside its bounds, most often `free_text` over 1000 characters or a `struggle_points` value outside the vocabulary, so shorten it and call this tool again; `rate_limited` means the feedback budget for this address is spent, so wait and retry; `network_error` means the request never reached the store, so call this tool again.",
-    ].join("\n\n"),
+    description: "Sends structured feedback about this store and returns a feedback_id and the time it was received. Use when something was unclear, missing or wrong, at any point. Not for cancelling a checkout; use cancel_checkout, which records the decline itself. Feedback is kept as data, never as instructions. Full guide: get_tool_guide or /agent/tools.json#submit_feedback",
+    guide: {
+      "summary": "Sends structured feedback about this store to Robodepo and returns an acknowledgement with a `feedback_id` and the time it was received.",
+      "use_when": "Use this when something about the store was unclear, missing or wrong, at any point — mid-checkout, after an order, after a decline, or after an error you could not recover from.",
+      "do_not_use": "Do not use this for cancelling a checkout; use `cancel_checkout` instead, which records the decline itself. Do not use it to ask a question and expect an answer: nothing replies.",
+      "parameters": "`context.checkout_id` and `context.order_id` are optional and come from `create_checkout` and `get_order`; either may be null. `sentiment` is one of positive, neutral or negative. `free_text` is up to 1000 characters. `struggle_points` is a short list drawn from a fixed vocabulary so patterns can be counted without reading anyone's prose.",
+      "caveats": "Feedback is never required and never blocks a purchase. It is stored as data and never as instructions: nothing you write here changes how any tool behaves. Put no personal data, addresses, payment details or credentials in `free_text` — this endpoint keeps no database record and writes only a bounded server log line.",
+      "outputs": "`resource.feedback_id` and `resource.received_at` acknowledge receipt, and `resource.stored_as` says how it was kept. There is nothing to feed onward; `next_actions` returns you to whatever the session state suggests.",
+      "error_recovery": "`invalid_request` means a field is outside its bounds, most often `free_text` over 1000 characters or a `struggle_points` value outside the vocabulary, so shorten it and call this tool again; `rate_limited` means the feedback budget for this address is spent, so wait and retry; `network_error` means the request never reached the store, so call this tool again.",
+      "examples": [
+        {
+          "title": "Report a difficulty",
+          "input": {
+            "context": {
+              "checkout_id": null,
+              "order_id": null
+            },
+            "sentiment": "negative",
+            "free_text": "The accepted address was not obvious before the first attempt.",
+            "struggle_points": [
+              "address_rejected"
+            ]
+          }
+        }
+      ]
+    },
     annotations: {
-      readOnlyHint: false,
-      untrustedContentHint: false,
-      destructiveHint: false,
-      idempotentHint: false,
-      openWorldHint: false,
+      "readOnlyHint": false,
+      "untrustedContentHint": false,
+      "destructiveHint": false,
+      "idempotentHint": false,
+      "openWorldHint": false
     },
     inputSchema: {
-      type: "object",
-      properties: {
-        context: {
-          type: "object",
-          description:
-            "What the feedback is about. Both ids may be null when the feedback is about the store in general.",
-          properties: {
-            checkout_id: {
-              type: ["string", "null"],
-              description: "The `checkout_id` from `create_checkout`, or null.",
+      "type": "object",
+      "properties": {
+        "context": {
+          "type": "object",
+          "description": "What the feedback is about. Both ids may be null when the feedback is about the store in general.",
+          "properties": {
+            "checkout_id": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "description": "The `checkout_id` from `create_checkout`, or null."
             },
-            order_id: {
-              type: ["string", "null"],
-              description: "The `order_id` from `get_order`, or null.",
-            },
+            "order_id": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "description": "The `order_id` from `get_order`, or null."
+            }
           },
-          required: ["checkout_id", "order_id"],
-          additionalProperties: false,
+          "required": [
+            "checkout_id",
+            "order_id"
+          ],
+          "additionalProperties": false
         },
-        sentiment: {
-          type: "string",
-          enum: ["positive", "neutral", "negative"],
-          description: "Your overall read of the experience.",
+        "sentiment": {
+          "type": "string",
+          "enum": [
+            "positive",
+            "neutral",
+            "negative"
+          ],
+          "description": "Your overall read of the experience."
         },
-        free_text: {
-          type: "string",
-          minLength: 1,
-          maxLength: 1000,
-          description:
-            "What happened, in plain words, up to 1000 characters. No personal data, addresses, payment details or credentials.",
+        "free_text": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 1000,
+          "description": "What happened, in plain words, up to 1000 characters. No personal data, addresses, payment details or credentials."
         },
-        struggle_points: {
-          type: "array",
-          minItems: 0,
-          maxItems: 10,
-          description:
-            "Zero to ten tags from the fixed vocabulary, so difficulties can be counted without reading prose.",
-          items: {
-            type: "string",
-            enum: [
+        "struggle_points": {
+          "type": "array",
+          "minItems": 0,
+          "maxItems": 10,
+          "description": "Zero to ten tags from the fixed vocabulary, so difficulties can be counted without reading prose.",
+          "items": {
+            "type": "string",
+            "enum": [
               "unclear_description",
               "unexpected_error",
               "price_changed",
@@ -751,58 +912,120 @@ export const TOOLS = Object.freeze([
               "could_not_find_product",
               "budget_not_met",
               "confirmation_unclear",
-              "other",
-            ],
-          },
-        },
+              "other"
+            ]
+          }
+        }
       },
-      required: ["context", "sentiment", "free_text", "struggle_points"],
-      additionalProperties: false,
+      "required": [
+        "context",
+        "sentiment",
+        "free_text",
+        "struggle_points"
+      ],
+      "additionalProperties": false
     },
   },
-
-  /* ---------------------------- Preview tools ---------------------------- */
-
+  {
+    name: "get_tool_guide",
+    title: "Read one tool's complete guide",
+    kind: "operational",
+    description: "Returns the complete guide for one Robodepo tool: summary, when to use it, what not to use it for, parameters, caveats, outputs, error recovery and worked examples. Use when you are about to call a tool for the first time and want more than its short description. Not for running the tool; call the tool by name instead. Full guide: get_tool_guide or /agent/tools.json#get_tool_guide",
+    guide: {
+      "summary": "Returns the full, unabridged guide for one registered tool — everything the short description had to leave out — as a structured object rather than one long string.",
+      "use_when": "Use this when you are about to call a tool for the first time, when a short description leaves you unsure which parameter comes from where, or when an error code named a recovery you want to read in full.",
+      "do_not_use": "Do not use this for running the tool; call the tool by its own name instead. Do not use it to discover what tools exist; the catalogue you were registered with already lists them, and `/agent/tools.json` serves the same guides as one document.",
+      "parameters": "`tool_name` is the exact name from the catalogue, such as `create_checkout`. Unknown names are refused with the list of valid names rather than a guess.",
+      "caveats": "It reads a static catalogue that ships with this page, so it makes no network request, holds no handle and cannot fail for any reason but an unknown name. The guide it returns is the same text `/agent/tools.json` publishes.",
+      "outputs": "`resource.name`, `resource.operational` and `resource.guide`, where the guide carries `summary`, `use_when`, `do_not_use`, `parameters`, `caveats`, `outputs`, `error_recovery` and `examples[]`. Feed an example's `input` straight back into the named tool.",
+      "error_recovery": "`not_found` is the only error and it means the name is not in this catalogue; the message lists every valid name, so pick one and call again. There is nothing to retry and no network failure to recover from.",
+      "examples": [
+        {
+          "title": "Read a tool in full before first use",
+          "input": {
+            "tool_name": "create_checkout"
+          }
+        }
+      ]
+    },
+    annotations: {
+      "readOnlyHint": true,
+      "untrustedContentHint": false,
+      "destructiveHint": false,
+      "idempotentHint": true,
+      "openWorldHint": false
+    },
+    inputSchema: {
+      "type": "object",
+      "properties": {
+        "tool_name": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 64,
+          "description": "The exact name of a registered tool, as it appears in this catalogue."
+        }
+      },
+      "required": [
+        "tool_name"
+      ],
+      "additionalProperties": false
+    },
+  },
   {
     name: "search_by_activity",
     title: "Preview: find products by what the person is doing",
     kind: "preview",
     recover: ["search_catalog"],
-    notBuilt:
-      "Semantic search by function or activity is not built. Nothing behind this tool interprets an activity, and no product is matched to one.",
-    description: [
-      PREVIEW_PREFIX +
-        "It is meant to find products by what the person is doing rather than by words they typed — \"something to keep the sun off on a boat\" — and to return ranked listings with the reasoning that put each one there.",
-      "Use this when it ships and the person describes a situation rather than a product. Do not use this for anything today; use `search_catalog` instead, which returns the demo catalogue and leaves relevance to your judgement, and `get_product` for the full record of a listing.",
-      "`activity` would be the situation in the person's own words, and `constraints` any limits such as a budget or a date. Neither is read by anything today.",
-      "This is the capability Robodepo's roadmap points at, and it is named here so the shape of the intent is visible — but it does not work, and `search_catalog` is not a quiet version of it: `search_catalog` filters nothing and ranks nothing across a one-product demo catalogue.",
-      "Outputs: this tool returns `status: \"not_available\"` with a message saying plainly what is not built. There are no listings, no ranking and no ids to feed onward. It does return `resource.roadmap`, a sketch of the intended inputs, output fields and response shape, marked `illustrative: true` — that example is not live data and nothing in it is built.",
-      "Error recovery: there is no error to recover from and no retry that will help. Call `search_catalog` to see what the store actually sells, then `submit_feedback` if the missing capability is what you needed.",
-    ].join("\n\n"),
+    notBuilt: "Semantic search by function or activity is not built. Nothing behind this tool interprets an activity, and no product is matched to one.",
+    description: "Preview — not operational in this demo. Describes the roadmap only; returns status not_available and must not be called to do real work. It will find products by what the person is doing rather than the words they typed, returning ranked listings with the reason each was chosen. Use search_catalog today. Full guide: get_tool_guide or /agent/tools.json#search_by_activity",
+    guide: {
+      "summary": "Preview — not operational in this demo. It is meant to find products by what the person is doing rather than by words they typed — \"something to keep the sun off on a boat\" — and to return ranked listings with the reasoning that put each one there.",
+      "use_when": "Use this when it ships and the person describes a situation rather than a product.",
+      "do_not_use": "Do not use this for anything today; use `search_catalog` instead, which returns the demo catalogue and leaves relevance to your judgement, and `get_product` for the full record of a listing.",
+      "parameters": "`activity` would be the situation in the person's own words, and `constraints` any limits such as a budget or a date. Neither is read by anything today.",
+      "caveats": "This is the capability Robodepo's roadmap points at, and it is named here so the shape of the intent is visible — but it does not work, and `search_catalog` is not a quiet version of it: `search_catalog` filters nothing and ranks nothing across a one-product demo catalogue.",
+      "outputs": "this tool returns `status: \"not_available\"` with a message saying plainly what is not built. There are no listings, no ranking and no ids to feed onward. It does return `resource.roadmap`, a sketch of the intended inputs, output fields and response shape, marked `illustrative: true` — that example is not live data and nothing in it is built.",
+      "error_recovery": "there is no error to recover from and no retry that will help. Call `search_catalog` to see what the store actually sells, then `submit_feedback` if the missing capability is what you needed.",
+      "examples": [
+        {
+          "title": "What a call would look like once built",
+          "input": {
+            "activity": "keep the sun off on a boat",
+            "constraints": "under A$150"
+          }
+        }
+      ]
+    },
     annotations: {
-      readOnlyHint: true,
-      untrustedContentHint: false,
-      destructiveHint: false,
-      idempotentHint: true,
-      openWorldHint: false,
+      "readOnlyHint": true,
+      "untrustedContentHint": false,
+      "destructiveHint": false,
+      "idempotentHint": true,
+      "openWorldHint": false
     },
     inputSchema: {
-      type: "object",
-      properties: {
-        activity: {
-          type: "string",
-          minLength: 1,
-          maxLength: 300,
-          description: "What the person is doing or needs to solve, in their own words.",
+      "type": "object",
+      "properties": {
+        "activity": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 300,
+          "description": "What the person is doing or needs to solve, in their own words."
         },
-        constraints: {
-          type: ["string", "null"],
-          maxLength: 300,
-          description: "Limits such as budget, date or size, or null.",
-        },
+        "constraints": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "maxLength": 300,
+          "description": "Limits such as budget, date or size, or null."
+        }
       },
-      required: ["activity", "constraints"],
-      additionalProperties: false,
+      "required": [
+        "activity",
+        "constraints"
+      ],
+      "additionalProperties": false
     },
   },
   {
@@ -810,37 +1033,54 @@ export const TOOLS = Object.freeze([
     title: "Preview: compare products side by side",
     kind: "preview",
     recover: ["get_product"],
-    notBuilt:
-      "Side-by-side comparison is not built. No comparison table, attribute alignment or evidence pack exists behind this tool.",
-    description: [
-      PREVIEW_PREFIX +
-        "It is meant to take two to five product ids and return one aligned comparison — shared attributes, where they differ, and the cited evidence behind each claim.",
-      "Use this when it ships and the person is choosing between candidates. Do not use this for anything today; use `get_product` on each id instead and compare the published fields yourself, and `search_catalog` to find the ids.",
-      "`product_ids` would come from `search_catalog`. The demo catalogue holds one product, so there is nothing here to compare even once this is built for a larger catalogue.",
-      "Nothing is cached, computed or reserved by calling this. It is listed so the roadmap is legible, not because a partial version runs underneath.",
-      "Outputs: this tool returns `status: \"not_available\"` with a plain explanation. There is no comparison object and no ids to feed onward. It does return `resource.roadmap`, a sketch of the intended inputs, output fields and response shape, marked `illustrative: true` — that example is not live data and nothing in it is built.",
-      "Error recovery: there is no error and no retry that helps. Call `get_product` for each id you hold, then `submit_feedback` if a real comparison is what you needed.",
-    ].join("\n\n"),
+    notBuilt: "Side-by-side comparison is not built. No comparison table, attribute alignment or evidence pack exists behind this tool.",
+    description: "Preview — not operational in this demo. Describes the roadmap only; returns status not_available and must not be called to do real work. It will take two to five product ids and return one aligned comparison, with the cited evidence behind each claim. Use get_product on each id today. Full guide: get_tool_guide or /agent/tools.json#compare_products",
+    guide: {
+      "summary": "Preview — not operational in this demo. It is meant to take two to five product ids and return one aligned comparison — shared attributes, where they differ, and the cited evidence behind each claim.",
+      "use_when": "Use this when it ships and the person is choosing between candidates.",
+      "do_not_use": "Do not use this for anything today; use `get_product` on each id instead and compare the published fields yourself, and `search_catalog` to find the ids.",
+      "parameters": "`product_ids` would come from `search_catalog`. The demo catalogue holds one product, so there is nothing here to compare even once this is built for a larger catalogue.",
+      "caveats": "Nothing is cached, computed or reserved by calling this. It is listed so the roadmap is legible, not because a partial version runs underneath.",
+      "outputs": "this tool returns `status: \"not_available\"` with a plain explanation. There is no comparison object and no ids to feed onward. It does return `resource.roadmap`, a sketch of the intended inputs, output fields and response shape, marked `illustrative: true` — that example is not live data and nothing in it is built.",
+      "error_recovery": "there is no error and no retry that helps. Call `get_product` for each id you hold, then `submit_feedback` if a real comparison is what you needed.",
+      "examples": [
+        {
+          "title": "What a call would look like once built",
+          "input": {
+            "product_ids": [
+              "prod_example",
+              "prod_example_two"
+            ]
+          }
+        }
+      ]
+    },
     annotations: {
-      readOnlyHint: true,
-      untrustedContentHint: false,
-      destructiveHint: false,
-      idempotentHint: true,
-      openWorldHint: false,
+      "readOnlyHint": true,
+      "untrustedContentHint": false,
+      "destructiveHint": false,
+      "idempotentHint": true,
+      "openWorldHint": false
     },
     inputSchema: {
-      type: "object",
-      properties: {
-        product_ids: {
-          type: "array",
-          minItems: 2,
-          maxItems: 5,
-          description: "Two to five product ids from `search_catalog`.",
-          items: { type: "string", minLength: 1, maxLength: 200 },
-        },
+      "type": "object",
+      "properties": {
+        "product_ids": {
+          "type": "array",
+          "minItems": 2,
+          "maxItems": 5,
+          "description": "Two to five product ids from `search_catalog`.",
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200
+          }
+        }
       },
-      required: ["product_ids"],
-      additionalProperties: false,
+      "required": [
+        "product_ids"
+      ],
+      "additionalProperties": false
     },
   },
   {
@@ -848,36 +1088,46 @@ export const TOOLS = Object.freeze([
     title: "Preview: cited evidence for a product",
     kind: "preview",
     recover: ["get_product"],
-    notBuilt:
-      "Evidence packs are not built. No manual, review or guide is indexed, and no citation exists to return.",
-    description: [
-      PREVIEW_PREFIX +
-        "It is meant to return the evidence behind a product — passages from manuals, reviews and buying guides, each with its citation — so a claim can be checked rather than trusted.",
-      "Use this when it ships and the person asks whether a product really does something. Do not use this for anything today; use `get_product` instead, which returns only the fields Robodepo actually publishes and discloses the source retailer, and `get_trust_manifest` for what the store claims about itself.",
-      "`product_id` would come from `search_catalog` or `get_product`. It is validated for shape and then ignored, because there is nothing to look up.",
-      "Robodepo publishes no product claim it cannot source, which is exactly why this tool returns nothing rather than a plausible summary. Calling it changes nothing and costs nothing.",
-      "Outputs: this tool returns `status: \"not_available\"` with a message saying what is missing. There is no evidence array, no citations and nothing to feed onward. It does return `resource.roadmap`, a sketch of the intended inputs, output fields and response shape, marked `illustrative: true` — that example is not live data and nothing in it is built.",
-      "Error recovery: there is no error and no retry that helps. Call `get_product` for the published record, then `submit_feedback` if the missing evidence is what blocked the person.",
-    ].join("\n\n"),
+    notBuilt: "Evidence packs are not built. No manual, review or guide is indexed, and no citation exists to return.",
+    description: "Preview — not operational in this demo. Describes the roadmap only; returns status not_available and must not be called to do real work. It will return passages from manuals, reviews and buying guides with citations, so a product claim can be checked rather than trusted. Use get_product today. Full guide: get_tool_guide or /agent/tools.json#get_evidence_pack",
+    guide: {
+      "summary": "Preview — not operational in this demo. It is meant to return the evidence behind a product — passages from manuals, reviews and buying guides, each with its citation — so a claim can be checked rather than trusted.",
+      "use_when": "Use this when it ships and the person asks whether a product really does something.",
+      "do_not_use": "Do not use this for anything today; use `get_product` instead, which returns only the fields Robodepo actually publishes and discloses the source retailer, and `get_trust_manifest` for what the store claims about itself.",
+      "parameters": "`product_id` would come from `search_catalog` or `get_product`. It is validated for shape and then ignored, because there is nothing to look up.",
+      "caveats": "Robodepo publishes no product claim it cannot source, which is exactly why this tool returns nothing rather than a plausible summary. Calling it changes nothing and costs nothing.",
+      "outputs": "this tool returns `status: \"not_available\"` with a message saying what is missing. There is no evidence array, no citations and nothing to feed onward. It does return `resource.roadmap`, a sketch of the intended inputs, output fields and response shape, marked `illustrative: true` — that example is not live data and nothing in it is built.",
+      "error_recovery": "there is no error and no retry that helps. Call `get_product` for the published record, then `submit_feedback` if the missing evidence is what blocked the person.",
+      "examples": [
+        {
+          "title": "What a call would look like once built",
+          "input": {
+            "product_id": "prod_example"
+          }
+        }
+      ]
+    },
     annotations: {
-      readOnlyHint: true,
-      untrustedContentHint: false,
-      destructiveHint: false,
-      idempotentHint: true,
-      openWorldHint: false,
+      "readOnlyHint": true,
+      "untrustedContentHint": false,
+      "destructiveHint": false,
+      "idempotentHint": true,
+      "openWorldHint": false
     },
     inputSchema: {
-      type: "object",
-      properties: {
-        product_id: {
-          type: "string",
-          minLength: 1,
-          maxLength: 200,
-          description: "The product id from `search_catalog` or `get_product`.",
-        },
+      "type": "object",
+      "properties": {
+        "product_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 200,
+          "description": "The product id from `search_catalog` or `get_product`."
+        }
       },
-      required: ["product_id"],
-      additionalProperties: false,
+      "required": [
+        "product_id"
+      ],
+      "additionalProperties": false
     },
   },
   {
@@ -885,36 +1135,46 @@ export const TOOLS = Object.freeze([
     title: "Preview: alternative shipping services",
     kind: "preview",
     recover: ["create_checkout"],
-    notBuilt:
-      "Alternative shipping services are not built. The store quotes exactly one service and there is no second option to choose between.",
-    description: [
-      PREVIEW_PREFIX +
-        "It is meant to list the shipping services available for a prepared checkout — service name, price in AUD integer cents and delivery estimate — so the person can pick one.",
-      "Use this when it ships and the person cares about speed or cost. Do not use this for anything today; use `create_checkout` instead, which already returns the only service that exists, `standard_sandbox` at a flat A$12.00 to the accepted sandbox address, and `get_order` to read back what was actually shipped against.",
-      "`checkout_id` would come from `create_checkout`. It is not looked up, because there is nothing to look up.",
-      "There is no hidden cheaper or faster option being withheld here: the sandbox has one deterministic rate, and this tool exists to say so rather than to imply choice the store does not have.",
-      "Outputs: this tool returns `status: \"not_available\"` with that explanation. There is no options array and nothing to feed into a checkout. It does return `resource.roadmap`, a sketch of the intended inputs, output fields and response shape, marked `illustrative: true` — that example is not live data and nothing in it is built.",
-      "Error recovery: there is no error and no retry that helps. The shipping cost you already hold from `create_checkout` is the real one; call `submit_feedback` if the person needed a choice.",
-    ].join("\n\n"),
+    notBuilt: "Alternative shipping services are not built. The store quotes exactly one service and there is no second option to choose between.",
+    description: "Preview — not operational in this demo. Describes the roadmap only; returns status not_available and must not be called to do real work. It will list every shipping service available for a prepared checkout, with price in AUD integer cents and a delivery estimate. Use create_checkout today, which returns the one service that exists. Full guide: get_tool_guide or /agent/tools.json#get_shipping_options",
+    guide: {
+      "summary": "Preview — not operational in this demo. It is meant to list the shipping services available for a prepared checkout — service name, price in AUD integer cents and delivery estimate — so the person can pick one.",
+      "use_when": "Use this when it ships and the person cares about speed or cost.",
+      "do_not_use": "Do not use this for anything today; use `create_checkout` instead, which already returns the only service that exists, `standard_sandbox` at a flat A$12.00 to the accepted sandbox address, and `get_order` to read back what was actually shipped against.",
+      "parameters": "`checkout_id` would come from `create_checkout`. It is not looked up, because there is nothing to look up.",
+      "caveats": "There is no hidden cheaper or faster option being withheld here: the sandbox has one deterministic rate, and this tool exists to say so rather than to imply choice the store does not have.",
+      "outputs": "this tool returns `status: \"not_available\"` with that explanation. There is no options array and nothing to feed into a checkout. It does return `resource.roadmap`, a sketch of the intended inputs, output fields and response shape, marked `illustrative: true` — that example is not live data and nothing in it is built.",
+      "error_recovery": "there is no error and no retry that helps. The shipping cost you already hold from `create_checkout` is the real one; call `submit_feedback` if the person needed a choice.",
+      "examples": [
+        {
+          "title": "What a call would look like once built",
+          "input": {
+            "checkout_id": "chk_example"
+          }
+        }
+      ]
+    },
     annotations: {
-      readOnlyHint: true,
-      untrustedContentHint: false,
-      destructiveHint: false,
-      idempotentHint: true,
-      openWorldHint: false,
+      "readOnlyHint": true,
+      "untrustedContentHint": false,
+      "destructiveHint": false,
+      "idempotentHint": true,
+      "openWorldHint": false
     },
     inputSchema: {
-      type: "object",
-      properties: {
-        checkout_id: {
-          type: "string",
-          minLength: 1,
-          maxLength: 200,
-          description: "The `checkout_id` returned by `create_checkout`.",
-        },
+      "type": "object",
+      "properties": {
+        "checkout_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 200,
+          "description": "The `checkout_id` returned by `create_checkout`."
+        }
       },
-      required: ["checkout_id"],
-      additionalProperties: false,
+      "required": [
+        "checkout_id"
+      ],
+      "additionalProperties": false
     },
   },
   {
@@ -922,36 +1182,46 @@ export const TOOLS = Object.freeze([
     title: "Preview: a storefront assembled for this agent's brief",
     kind: "preview",
     recover: ["search_catalog"],
-    notBuilt:
-      "Per-agent custom storefronts are not built. No brief is read, no selection is assembled and no storefront is created.",
-    description: [
-      PREVIEW_PREFIX +
-        "It is meant to assemble a storefront for the brief a visiting agent arrives with — a narrowed selection, priced and ready to buy through the same checkout path — and return a link to it.",
-      "Use this when it ships and the person's need is broader than one product. Do not use this for anything today; use `search_catalog` instead to see the whole demo catalogue, which is one product, and `create_checkout` to buy it.",
-      "`brief` would be what the person wants, up to 500 characters. It is checked for shape and then discarded; nothing reads it and nothing is stored.",
-      "This is the most ambitious item on the roadmap and the least built. It is listed to show the direction, and it says so in its first words rather than returning an empty storefront that looks like a real one.",
-      "Outputs: this tool returns `status: \"not_available\"` with a plain explanation. There is no storefront, no link and nothing to feed onward. It does return `resource.roadmap`, a sketch of the intended inputs, output fields and response shape, marked `illustrative: true` — that example is not live data and nothing in it is built.",
-      "Error recovery: there is no error and no retry that helps. Call `search_catalog`, then `submit_feedback` to say what brief you would have given it.",
-    ].join("\n\n"),
+    notBuilt: "Per-agent custom storefronts are not built. No brief is read, no selection is assembled and no storefront is created.",
+    description: "Preview — not operational in this demo. Describes the roadmap only; returns status not_available and must not be called to do real work. It will assemble a checkout-ready storefront for the brief a visiting agent arrives with, and return a link to it. Use search_catalog today. Full guide: get_tool_guide or /agent/tools.json#create_custom_store",
+    guide: {
+      "summary": "Preview — not operational in this demo. It is meant to assemble a storefront for the brief a visiting agent arrives with — a narrowed selection, priced and ready to buy through the same checkout path — and return a link to it.",
+      "use_when": "Use this when it ships and the person's need is broader than one product.",
+      "do_not_use": "Do not use this for anything today; use `search_catalog` instead to see the whole demo catalogue, which is one product, and `create_checkout` to buy it.",
+      "parameters": "`brief` would be what the person wants, up to 500 characters. It is checked for shape and then discarded; nothing reads it and nothing is stored.",
+      "caveats": "This is the most ambitious item on the roadmap and the least built. It is listed to show the direction, and it says so in its first words rather than returning an empty storefront that looks like a real one.",
+      "outputs": "this tool returns `status: \"not_available\"` with a plain explanation. There is no storefront, no link and nothing to feed onward. It does return `resource.roadmap`, a sketch of the intended inputs, output fields and response shape, marked `illustrative: true` — that example is not live data and nothing in it is built.",
+      "error_recovery": "there is no error and no retry that helps. Call `search_catalog`, then `submit_feedback` to say what brief you would have given it.",
+      "examples": [
+        {
+          "title": "What a call would look like once built",
+          "input": {
+            "brief": "Sun protection for a week on the water"
+          }
+        }
+      ]
+    },
     annotations: {
-      readOnlyHint: true,
-      untrustedContentHint: false,
-      destructiveHint: false,
-      idempotentHint: true,
-      openWorldHint: false,
+      "readOnlyHint": true,
+      "untrustedContentHint": false,
+      "destructiveHint": false,
+      "idempotentHint": true,
+      "openWorldHint": false
     },
     inputSchema: {
-      type: "object",
-      properties: {
-        brief: {
-          type: "string",
-          minLength: 1,
-          maxLength: 500,
-          description: "What the person wants the storefront to cover, up to 500 characters.",
-        },
+      "type": "object",
+      "properties": {
+        "brief": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 500,
+          "description": "What the person wants the storefront to cover, up to 500 characters."
+        }
       },
-      required: ["brief"],
-      additionalProperties: false,
+      "required": [
+        "brief"
+      ],
+      "additionalProperties": false
     },
   },
   {
@@ -959,41 +1229,57 @@ export const TOOLS = Object.freeze([
     title: "Preview: reminders when a consumable runs down",
     kind: "preview",
     recover: ["get_product"],
-    notBuilt:
-      "Replenishment alerts are not built. No subscription is created, no schedule is kept and no reminder will ever arrive.",
-    description: [
-      PREVIEW_PREFIX +
-        "It is meant to register a repeating reminder for a consumable — weekly, monthly or quarterly — so the person is prompted before they run out, and to return the subscription id.",
-      "Use this when it ships and the person buys something they will need again. Do not use this for anything today; use `get_product` instead to read the item and `create_checkout` when they actually want another one.",
-      "`product_id` would come from `search_catalog` or `get_product`, and `cadence` would be weekly, monthly or quarterly. Neither is stored.",
-      "Nothing is scheduled and nothing will be sent. Robodepo holds no contact details for anyone, so there is no channel a reminder could arrive on; saying that plainly is more useful than a subscription id that means nothing.",
-      "Outputs: this tool returns `status: \"not_available\"` with that explanation. There is no subscription id and nothing to feed onward. It does return `resource.roadmap`, a sketch of the intended inputs, output fields and response shape, marked `illustrative: true` — that example is not live data and nothing in it is built.",
-      "Error recovery: there is no error and no retry that helps. Call `get_product` for the record, then `submit_feedback` if the person wanted the reminder.",
-    ].join("\n\n"),
+    notBuilt: "Replenishment alerts are not built. No subscription is created, no schedule is kept and no reminder will ever arrive.",
+    description: "Preview — not operational in this demo. Describes the roadmap only; returns status not_available and must not be called to do real work. It will register a weekly, monthly or quarterly reminder for a consumable, so the person is prompted before they run out. Use get_product today. Full guide: get_tool_guide or /agent/tools.json#subscribe_replenishment_alerts",
+    guide: {
+      "summary": "Preview — not operational in this demo. It is meant to register a repeating reminder for a consumable — weekly, monthly or quarterly — so the person is prompted before they run out, and to return the subscription id.",
+      "use_when": "Use this when it ships and the person buys something they will need again.",
+      "do_not_use": "Do not use this for anything today; use `get_product` instead to read the item and `create_checkout` when they actually want another one.",
+      "parameters": "`product_id` would come from `search_catalog` or `get_product`, and `cadence` would be weekly, monthly or quarterly. Neither is stored.",
+      "caveats": "Nothing is scheduled and nothing will be sent. Robodepo holds no contact details for anyone, so there is no channel a reminder could arrive on; saying that plainly is more useful than a subscription id that means nothing.",
+      "outputs": "this tool returns `status: \"not_available\"` with that explanation. There is no subscription id and nothing to feed onward. It does return `resource.roadmap`, a sketch of the intended inputs, output fields and response shape, marked `illustrative: true` — that example is not live data and nothing in it is built.",
+      "error_recovery": "there is no error and no retry that helps. Call `get_product` for the record, then `submit_feedback` if the person wanted the reminder.",
+      "examples": [
+        {
+          "title": "What a call would look like once built",
+          "input": {
+            "product_id": "prod_example",
+            "cadence": "monthly"
+          }
+        }
+      ]
+    },
     annotations: {
-      readOnlyHint: true,
-      untrustedContentHint: false,
-      destructiveHint: false,
-      idempotentHint: true,
-      openWorldHint: false,
+      "readOnlyHint": true,
+      "untrustedContentHint": false,
+      "destructiveHint": false,
+      "idempotentHint": true,
+      "openWorldHint": false
     },
     inputSchema: {
-      type: "object",
-      properties: {
-        product_id: {
-          type: "string",
-          minLength: 1,
-          maxLength: 200,
-          description: "The product id from `search_catalog` or `get_product`.",
+      "type": "object",
+      "properties": {
+        "product_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 200,
+          "description": "The product id from `search_catalog` or `get_product`."
         },
-        cadence: {
-          type: "string",
-          enum: ["weekly", "monthly", "quarterly"],
-          description: "How often the reminder would repeat.",
-        },
+        "cadence": {
+          "type": "string",
+          "enum": [
+            "weekly",
+            "monthly",
+            "quarterly"
+          ],
+          "description": "How often the reminder would repeat."
+        }
       },
-      required: ["product_id", "cadence"],
-      additionalProperties: false,
+      "required": [
+        "product_id",
+        "cadence"
+      ],
+      "additionalProperties": false
     },
   },
 ]);
@@ -1014,11 +1300,18 @@ export function TOOL_CATALOGUE_JSON() {
   return TOOLS.map((tool) => ({
     name: tool.name,
     title: tool.title,
+    operational: tool.kind === "operational",
     description: tool.description,
     inputSchema: tool.inputSchema,
     annotations: tool.annotations,
-    operational: tool.kind === "operational",
+    guide: tool.guide,
   }));
+}
+
+/** The guide for one tool, or null when the name is not in this catalogue. */
+export function toolGuide(name) {
+  const tool = TOOLS.find((candidate) => candidate.name === name) ?? null;
+  return tool ? { name: tool.name, operational: tool.kind === "operational", guide: tool.guide } : null;
 }
 
 /* ------------------------------------------------------------------------ *
@@ -1049,19 +1342,8 @@ const PREVIEW_ROADMAPS = Object.freeze({
       status: "ok",
       resource: {
         type: "listings",
-        query_understanding: "A plain restatement of the activity the agent asked about.",
-        listings: [
-          {
-            product_id: "prod_example",
-            title: "Example listing title",
-            display_price_cents: null,
-            formatted_price: null,
-            match_reason: "One sentence saying why this listing suits that activity.",
-            confidence: null,
-          },
-        ],
+        listings: [{ product_id: "prod_example", match_reason: "Why this fits the activity." }],
       },
-      next_actions: [{ tool: "get_product", why: "Read the full record for a listing." }],
     },
     illustrative: true,
   },
@@ -1080,17 +1362,8 @@ const PREVIEW_ROADMAPS = Object.freeze({
       status: "ok",
       resource: {
         type: "comparison",
-        comparison: {
-          attributes: ["attribute_name"],
-          rows: [
-            { product_id: "prod_example", values: { attribute_name: null } },
-            { product_id: "prod_example_two", values: { attribute_name: null } },
-          ],
-          differences: ["A sentence naming where the two records actually differ."],
-        },
-        citations: [{ claim: "The claim being supported.", source_url: null }],
+        rows: [{ product_id: "prod_example", values: { attribute_name: null } }],
       },
-      next_actions: [{ tool: "create_checkout", why: "Buy the one the person chose." }],
     },
     illustrative: true,
   },
@@ -1110,19 +1383,8 @@ const PREVIEW_ROADMAPS = Object.freeze({
       status: "ok",
       resource: {
         type: "evidence_pack",
-        product_id: "prod_example",
-        evidence: [
-          {
-            claim: "The claim a person asked about.",
-            passage: "The quoted passage that supports or refutes it.",
-            source_type: "manual",
-            source_url: null,
-            retrieved_at: null,
-          },
-        ],
-        unsupported_claims: ["A claim no source backs, named rather than quietly dropped."],
+        evidence: [{ claim: "The claim asked about.", source_type: "manual", source_url: null }],
       },
-      next_actions: [{ tool: "get_product", why: "Read the published record alongside it." }],
     },
     illustrative: true,
   },
@@ -1142,21 +1404,8 @@ const PREVIEW_ROADMAPS = Object.freeze({
       status: "ok",
       resource: {
         type: "shipping_options",
-        checkout_id: "chk_example",
-        options: [
-          {
-            shipping_quote_id: "quote_example",
-            service: "service_name",
-            shipping_cents: null,
-            formatted_price: null,
-            delivery_estimate: "A stated range, once a carrier can supply one.",
-          },
-        ],
-        selected_shipping_quote_id: "quote_example",
+        options: [{ shipping_quote_id: "quote_example", service: "service_name", shipping_cents: null }],
       },
-      next_actions: [
-        { tool: "create_checkout", why: "Re-price the order against the chosen service." },
-      ],
     },
     illustrative: true,
   },
@@ -1175,15 +1424,8 @@ const PREVIEW_ROADMAPS = Object.freeze({
       status: "ok",
       resource: {
         type: "custom_store",
-        store: {
-          store_id: "store_example",
-          url: "/s/store_example",
-          brief_understood_as: "A plain restatement of the brief the agent supplied.",
-          listings: [{ product_id: "prod_example", title: "Example listing title" }],
-          expires_at: null,
-        },
+        store: { store_id: "store_example", url: "/s/store_example", expires_at: null },
       },
-      next_actions: [{ tool: "create_checkout", why: "Buy from the assembled selection." }],
     },
     illustrative: true,
   },
@@ -1202,15 +1444,8 @@ const PREVIEW_ROADMAPS = Object.freeze({
       status: "ok",
       resource: {
         type: "subscription",
-        subscription: {
-          subscription_id: "sub_example",
-          product_id: "prod_example",
-          cadence: "monthly",
-          next_reminder_at: null,
-          state: "active",
-        },
+        subscription: { subscription_id: "sub_example", cadence: "monthly", state: "active" },
       },
-      next_actions: [{ tool: "get_product", why: "Re-read the item before the next order." }],
     },
     illustrative: true,
   },
@@ -1301,19 +1536,19 @@ export function createRobodepoTools(options = {}) {
       case "search_catalog":
         return {
           tool: "search_catalog",
-          why: "See what this store sells before pricing anything.",
+          why: "See what this store sells.",
           args_hint: { query: "", limit: 10, response_format: "concise" },
         };
       case "get_product":
         return {
           tool: "get_product",
-          why: "Read the full published record, including both prices, for one product.",
-          args_hint: { product_id: PRODUCT_ID, response_format: "detailed" },
+          why: "Read one product's full record, including both prices.",
+          args_hint: { product_id: PRODUCT_ID },
         };
       case "create_checkout":
         return {
           tool: "create_checkout",
-          why: "Price the whole order and get the link the person confirms on.",
+          why: "Price the order and get the approval link.",
           args_hint: {
             line_items: [{ product_id: PRODUCT_ID, quantity: SUPPORTED_QUANTITY }],
             shipping_address: { ...ACCEPTED_ADDRESS },
@@ -1324,17 +1559,23 @@ export function createRobodepoTools(options = {}) {
       case "cancel_checkout":
         return {
           tool: "cancel_checkout",
-          why: "Decline explicitly so the refusal is a recorded outcome.",
+          why: "Decline explicitly so the refusal is recorded.",
           args_hint: { checkout_id: checkout ? checkout.checkout_id : null, reason: null },
         };
       case "get_order":
         return {
           tool: "get_order",
-          why: "Read back the sandbox order once the person has confirmed.",
+          why: "Read back the order once the person has approved.",
           args_hint: {
             order_id: checkout ? checkout.order_id : null,
             checkout_id: checkout ? checkout.checkout_id : null,
           },
+        };
+      case "get_tool_guide":
+        return {
+          tool: "get_tool_guide",
+          why: "Read a tool's complete guide before calling it for the first time.",
+          args_hint: { tool_name: "create_checkout" },
         };
       case "get_trust_manifest":
         return {
@@ -1345,15 +1586,12 @@ export function createRobodepoTools(options = {}) {
       case "submit_feedback":
         return {
           tool: "submit_feedback",
-          why: "Tell Robodepo what was unclear, missing or wrong.",
+          why: "Say what was unclear, missing or wrong.",
           args_hint: {
             context: {
               checkout_id: checkout ? checkout.checkout_id : null,
               order_id: checkout ? checkout.order_id : null,
             },
-            sentiment: "neutral",
-            free_text: "",
-            struggle_points: [],
           },
         };
       default:
@@ -1580,8 +1818,8 @@ export function createRobodepoTools(options = {}) {
       "info",
       "demo_catalogue",
       "recoverable",
-      "$.resource.listings",
-      "This demo catalogue holds one product. Nothing was ranked, filtered or keyword-matched against the query: whether this listing answers it is your judgement, not the store's.",
+      null,
+      "One product in this catalogue. Nothing was ranked or keyword-matched against your query; relevance is your call.",
     );
     const messages = buyable
       ? [catalogueMessage]
@@ -1608,9 +1846,8 @@ export function createRobodepoTools(options = {}) {
       next_actions: computeNextActions(["get_product", "create_checkout"], "search_catalog"),
       links: [trustManifestLink()],
       instructions: {
-        for_human: `Robodepo's sandbox catalogue has one item: ${listing.title ?? "the demo product"} at ${listing.formatted_price ?? "an unpriced amount"}.`,
-        for_agent:
-          "Read the listing, then call get_product for the full record or create_checkout to price the order.",
+        for_human: `One item: ${listing.title ?? "the demo product"} at ${listing.formatted_price ?? "an unpriced amount"}.`,
+        for_agent: "Call get_product for the full record, or create_checkout to price it.",
       },
     });
   }
@@ -1642,16 +1879,15 @@ export function createRobodepoTools(options = {}) {
           "info",
           "price_disclosure",
           "recoverable",
-          "$.resource.display_price_cents",
-          "Both prices are published. Robodepo's displayed price sits above the source retailer's price, and the source retailer's own price can move independently.",
+          null,
+          "Both prices are published: the displayed price sits above the source retailer's, and the retailer's own price can move.",
         ),
       ],
       next_actions: computeNextActions(["create_checkout", "search_catalog"], "get_product"),
       links: [trustManifestLink()],
       instructions: {
         for_human: `${product.title ?? "This item"} is ${formatAud(product.display_price_cents) ?? "unpriced"} from ${product.source?.retailer ?? "the source retailer"}.`,
-        for_agent:
-          "Relay both prices and the source retailer, then call create_checkout when the person is ready.",
+        for_agent: "Relay both prices and the retailer, then call create_checkout.",
       },
     });
   }
@@ -1793,7 +2029,7 @@ export function createRobodepoTools(options = {}) {
         "human_confirmation_required",
         "requires_buyer_review",
         "$.resource.confirmation_url",
-        "The order is priced and ready. Only the person can place it, on Robodepo's own approval page; the agent must not submit that form. Where the browser has a fingerprint or face unlock, the person approves with one touch, and the browser checks that gesture — it grants no server-side authority, and Robodepo verifies the same one-time confirmation it always has. Where it does not, the plain confirmation button is shown instead. The checkout expires 15 minutes after creation. The payment is a Stripe test payment: nothing is charged, no retailer order is placed and nothing is shipped.",
+        "Priced and ready. Only the person can place it, on Robodepo's approval page — one biometric touch where the browser has one, a plain button where it does not, and no tool can submit either. The checkout expires 15 minutes after creation. Stripe test payment: nothing is charged, no retailer order, nothing ships.",
       ),
     ];
 
@@ -1850,10 +2086,8 @@ export function createRobodepoTools(options = {}) {
         trustManifestLink(),
       ],
       instructions: {
-        for_human:
-          "Open the approval page and approve with your fingerprint or face — or the plain button if your device has neither — to place a sandbox order. Nothing is charged.",
-        for_agent:
-          "Hand the person the confirmation_url. Do not submit it yourself; no tool can. links[].confirmation_page is the plain page if they prefer it. After they approve, call get_order.",
+        for_human: "Open the approval page and approve to place a sandbox order; nothing is charged.",
+        for_agent: "Hand over confirmation_url, then call get_order once they approve.",
       },
     });
   }
@@ -2074,7 +2308,7 @@ export function createRobodepoTools(options = {}) {
           "sandbox_order",
           "recoverable",
           null,
-          "This is a sandbox order paid with a Stripe test payment. No money moved, no order was placed with the source retailer and nothing will be shipped.",
+          "Sandbox order, Stripe test payment. No money moved, no retailer order, nothing ships.",
         ),
       ],
       next_actions: computeNextActions(null, "get_order"),
@@ -2083,8 +2317,58 @@ export function createRobodepoTools(options = {}) {
         trustManifestLink(),
       ],
       instructions: {
-        for_human: `Order ${order.order_id ?? orderId} is confirmed for ${formatAud(order.total_cents) ?? "the quoted total"} to ${order.delivery_region ?? "the delivery region"}. It is a sandbox order; nothing was charged.`,
-        for_agent: "Read the order back to the person, then offer submit_feedback.",
+        for_human: `Order ${order.order_id ?? orderId} is confirmed for ${formatAud(order.total_cents) ?? "the quoted total"} to ${order.delivery_region ?? "the delivery region"}. Sandbox only; nothing was charged.`,
+        for_agent: "Read the order back to the person.",
+      },
+    });
+  }
+
+  /**
+   * The complete guide for one tool. Reads the static catalogue that shipped
+   * with this page, so it makes no request and cannot fail on the network.
+   */
+  async function getToolGuide(input) {
+    const name = typeof input?.tool_name === "string" ? input.tool_name : "";
+    const found = toolGuide(name);
+
+    if (!found) {
+      return buildEnvelope({
+        status: "error",
+        resource: { type: "tool_guide", name: name || null, guide: null },
+        messages: [
+          message(
+            "error",
+            "not_found",
+            "requires_buyer_input",
+            "$.tool_name",
+            `There is no tool called ${name || "(empty)"} here. Valid names: ${TOOLS.map((tool) => tool.name).join(", ")}.`,
+          ),
+        ],
+        next_actions: computeNextActions(["get_tool_guide"], "get_tool_guide"),
+        links: [trustManifestLink()],
+        instructions: {
+          for_human: null,
+          for_agent: "Pick a name from the list in the message and call get_tool_guide again.",
+        },
+      });
+    }
+
+    return buildEnvelope({
+      status: "ok",
+      resource: { type: "tool_guide", ...found },
+      messages: [],
+      // A preview has nothing to call, so point at the operational tool its
+      // own guide names instead of at itself.
+      next_actions: computeNextActions(
+        found.operational ? [found.name] : (previewRecovery(found.name) ?? ["search_catalog"]),
+        "get_tool_guide",
+      ),
+      links: [trustManifestLink()],
+      instructions: {
+        for_human: null,
+        for_agent: found.operational
+          ? `Read guide.parameters and guide.examples, then call ${found.name}.`
+          : `${found.name} is a preview and returns not_available; guide.do_not_use names the tool to use instead.`,
       },
     });
   }
@@ -2105,16 +2389,15 @@ export function createRobodepoTools(options = {}) {
           "info",
           "statistics_intentionally_empty",
           "recoverable",
-          "$.resource.manifest.statistics.published",
-          "The published statistics list is empty on purpose. No statistic reaches this manifest until it is individually approved and independently verifiable, so an empty list is the honest state rather than a missing feature.",
+          null,
+          "The statistics list is empty on purpose: nothing reaches it until it is individually approved and independently verifiable.",
         ),
       ],
       next_actions: computeNextActions(null, "get_trust_manifest"),
       links: [trustManifestLink()],
       instructions: {
-        for_human:
-          "Robodepo publishes what it is and what it cannot do: no real charge, no retailer order, no fulfilment.",
-        for_agent: "Use the manifest's checkout block to check the sequence and safe error codes.",
+        for_human: "Robodepo publishes what it cannot do: no real charge, no retailer order, no fulfilment.",
+        for_agent: "Read manifest.checkout for the sequence and safe error codes.",
       },
     });
   }
@@ -2194,6 +2477,7 @@ export function createRobodepoTools(options = {}) {
   }
 
   const HANDLERS = {
+    get_tool_guide: getToolGuide,
     search_catalog: searchCatalog,
     get_product: getProduct,
     create_checkout: createCheckout,
@@ -2285,6 +2569,7 @@ export function createRobodepoTools(options = {}) {
       description: tool.description,
       inputSchema: tool.inputSchema,
       annotations: tool.annotations,
+      guide: tool.guide,
     }));
   }
 
@@ -2390,18 +2675,57 @@ export function createRobodepoTools(options = {}) {
 
 const ACTIVITY_LIMIT = 50;
 
+/** Section order and labels for a rendered guide. */
+const GUIDE_SECTIONS = [
+  ["summary", "Summary"],
+  ["use_when", "When to use it"],
+  ["do_not_use", "When not to use it"],
+  ["parameters", "Parameters"],
+  ["caveats", "Caveats"],
+  ["outputs", "Outputs"],
+  ["error_recovery", "Error recovery"],
+];
+
 /**
- * First sentence of a description, for the tool list. A preview's opening
- * disclaimer is dropped here only because the badge beside it already says
- * PREVIEW; the description itself still leads with it everywhere else.
+ * The full guide behind a disclosure. Built with `textContent` throughout, so
+ * nothing in a guide can ever be interpreted as markup.
  */
-function firstSentence(text) {
-  const paragraph = text.split("\n\n")[0];
-  const body = paragraph.startsWith(PREVIEW_PREFIX)
-    ? paragraph.slice(PREVIEW_PREFIX.length)
-    : paragraph;
-  const match = body.match(/^[\s\S]*?[.!?](?=\s|$)/);
-  return match ? match[0] : body;
+function renderGuide(doc, tool) {
+  const details = doc.createElement("details");
+  details.className = "tool-guide";
+
+  const summary = doc.createElement("summary");
+  summary.textContent = "Full guide";
+  details.append(summary);
+
+  for (const [key, label] of GUIDE_SECTIONS) {
+    const text = tool.guide?.[key];
+    if (!text) {
+      continue;
+    }
+    const heading = doc.createElement("h4");
+    heading.textContent = label;
+    const body = doc.createElement("p");
+    body.textContent = text;
+    details.append(heading, body);
+  }
+
+  const examples = tool.guide?.examples ?? [];
+  if (examples.length > 0) {
+    const heading = doc.createElement("h4");
+    heading.textContent = examples.length === 1 ? "Example" : "Examples";
+    details.append(heading);
+    for (const example of examples) {
+      const caption = doc.createElement("p");
+      caption.textContent = example.title;
+      const block = doc.createElement("pre");
+      block.className = "guide-example";
+      block.textContent = JSON.stringify(example.input, null, 2);
+      details.append(caption, block);
+    }
+  }
+
+  return details;
 }
 
 export function mountAgentPage(tools, doc, registration) {
@@ -2412,6 +2736,8 @@ export function mountAgentPage(tools, doc, registration) {
   if (!statusNode || !listNode || !handoffNode || !activityNode) {
     return;
   }
+
+  wireCopyPromptButton(doc);
 
   const catalogue = tools.list();
 
@@ -2425,9 +2751,19 @@ export function mountAgentPage(tools, doc, registration) {
     badge.textContent = tool.kind;
     const summary = doc.createElement("p");
     summary.className = "tool-summary";
-    summary.textContent = firstSentence(tool.description);
-    item.append(name, badge, summary);
+    // The registered description, whole. It is short by design now, and the
+    // rich text it replaced is one disclosure away rather than gone.
+    summary.textContent = tool.description;
+    item.append(name, badge, summary, renderGuide(doc, tool));
     listNode.append(item);
+  }
+
+  // The page markup carries a count; keep it honest against the catalogue.
+  const catalogueLabel = listNode.closest
+    ? listNode.closest("details")?.querySelector("summary")
+    : null;
+  if (catalogueLabel) {
+    catalogueLabel.textContent = `Tool catalogue (${catalogue.length} tools)`;
   }
 
   if (registration && registration.available && registration.registered > 0) {
@@ -2458,8 +2794,12 @@ export function mountAgentPage(tools, doc, registration) {
   function renderHandoff(checkout) {
     handoffNode.replaceChildren();
 
+    const kicker = doc.createElement("p");
+    kicker.className = "eyebrow";
+    kicker.textContent = "The moment of truth";
+
     const heading = doc.createElement("h2");
-    heading.textContent = "Handoff";
+    heading.textContent = "One decision left, and it isn't the agent's";
 
     const list = doc.createElement("dl");
     list.className = "handoff";
@@ -2479,7 +2819,8 @@ export function mountAgentPage(tools, doc, registration) {
 
     const button = doc.createElement("button");
     button.type = "button";
-    button.textContent = "Open confirmation page";
+    button.className = "handoff-button";
+    button.textContent = "Open approval page";
     button.addEventListener("click", () => {
       tools.openConfirmation(checkout.checkout_id);
     });
@@ -2487,11 +2828,51 @@ export function mountAgentPage(tools, doc, registration) {
     const note = doc.createElement("p");
     note.className = "note";
     note.textContent =
-      "The person confirms on Robodepo's own page. The agent never submits that form.";
+      "The person approves on Robodepo's own page. No tool can submit it.";
 
-    handoffNode.append(heading, list, button, note);
+    handoffNode.append(kicker, heading, list, button, note);
     handoffNode.hidden = false;
   }
+}
+
+/**
+ * Wires the "Try the complete journey" copy button, when the page markup
+ * provides one. Copies the sample prompt's own `textContent` to the
+ * clipboard — never `innerHTML` — and reports success or failure back only
+ * through the button's own label, so no extra DOM is created for it.
+ */
+function wireCopyPromptButton(doc) {
+  const button = doc.getElementById("copy-prompt-button");
+  const source = doc.getElementById("agent-prompt");
+  if (!button || !source) {
+    return;
+  }
+  const defaultLabel = button.textContent;
+  let resetHandle = null;
+  button.addEventListener("click", () => {
+    const text = source.textContent;
+    const canCopy =
+      typeof navigator !== "undefined" &&
+      navigator.clipboard &&
+      typeof navigator.clipboard.writeText === "function";
+    const outcome = canCopy
+      ? navigator.clipboard.writeText(text)
+      : Promise.reject(new Error("clipboard unavailable"));
+    outcome.then(
+      () => {
+        button.textContent = "Copied";
+      },
+      () => {
+        button.textContent = "Copy failed";
+      },
+    );
+    if (resetHandle) {
+      clearTimeout(resetHandle);
+    }
+    resetHandle = setTimeout(() => {
+      button.textContent = defaultLabel;
+    }, 2000);
+  });
 }
 
 /* ------------------------------------------------------------------------ *

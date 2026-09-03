@@ -54,7 +54,7 @@ function randomBytes(length) {
 export async function requestApprovalGesture(navigatorRef, hostname) {
   await navigatorRef.credentials.create({
     publicKey: {
-      rp: { name: "Robodepo (working name)", id: hostname },
+      rp: { name: "Robodepo", id: hostname },
       user: {
         id: randomBytes(16),
         name: "sandbox-buyer",

@@ -1,4 +1,4 @@
-# Robodepo (working name) — WebMCP agent tools
+# Robodepo — WebMCP agent tools
 
 Robodepo is a working sandbox store built for AI shopping agents. This repository is a
 WebMCP layer over that store's existing purchase system: an agent searches the catalogue,
@@ -47,6 +47,22 @@ is rate limited to 10 attempts per address per hour. Nothing here is a real tran
 runs in Stripe test mode, so there is no real charge, no source-retailer order and no
 fulfilment.
 
+### Try it in ChatGPT's in-app browser
+
+Open **https://robodepo.shop/agent** in ChatGPT's in-app browser — it discovers the
+WebMCP tools with no flag needed — and paste this prompt:
+
+```
+Find the beige canvas bucket hat in L-XL, show me its source and delivered price, prepare
+the sandbox checkout, then give me the approval link. Do not confirm it for me.
+```
+
+That single prompt exercises the whole tool chain: `search_catalog` finds the hat,
+`get_product` discloses its source and price, `create_checkout` runs cart through mandate
+and returns a `confirmation_url`, and the agent hands that link back instead of trying to
+press it — because no tool can. Opening the link is the one step that stays with the
+person.
+
 ## Run it locally
 
 This repository has no server of its own. The tools in `agent/robodepo-webmcp.js` call
@@ -67,27 +83,37 @@ defines its exports and does nothing else:
 node -e 'import("./agent/robodepo-webmcp.js").then(m => console.log(JSON.stringify(m.TOOL_CATALOGUE_JSON(), null, 2)))'
 ```
 
-`TOOL_CATALOGUE_JSON()` returns the same thirteen tool definitions — name, title,
-description, JSON Schema `inputSchema`, and annotations — that the live page registers with
-`document.modelContext.registerTool()`.
+`TOOL_CATALOGUE_JSON()` returns the same fourteen tool definitions — name, title,
+description, JSON Schema `inputSchema`, annotations, and a `guide` — that the live page
+registers with `document.modelContext.registerTool()`.
 
-## The 13 tools
+## The 14 tools
 
-| Tool | Kind | What it does |
+Each tool's registered `description` is kept short by design — enough to choose whether
+to call it. The complete guide for every tool (summary, when to use it, what not to use it
+for, parameters, caveats, outputs, error recovery and worked examples) lives in that same
+tool's `guide` field, and is readable two ways: call `get_tool_guide` with a tool name, or
+fetch the whole catalogue as one document at
+[`https://robodepo.shop/agent/tools.json`](https://robodepo.shop/agent/tools.json). The
+table below is generated straight from `TOOL_CATALOGUE_JSON()` — name, status and the
+short registered description, unedited.
+
+| Tool | Status | Description |
 |---|---|---|
-| `search_catalog` | Operational | Returns the Robodepo demo catalogue as listings, each with its product id, title, variant, availability, the disclosed source retailer, and the displayed price. |
-| `get_product` | Operational | Returns every published field for one product: title, variant, availability, the source retailer's price and Robodepo's displayed price, plus the source disclosure. |
-| `create_checkout` | Operational | Runs the entire pre-purchase path in one call — cart, item, address, shipping quote and purchase mandate — and returns a priced checkout with a `confirmation_url` the person opens to place the sandbox order. |
-| `cancel_checkout` | Operational | Marks a checkout prepared in this browser as declined, records the decline with Robodepo, and returns `status: "canceled"` so a correct refusal is a recorded outcome rather than something inferred from silence. |
-| `get_order` | Operational | Reads a confirmed sandbox order and returns its status, item, quantity, delivery region and totals. |
-| `get_trust_manifest` | Operational | Fetches Robodepo's machine-readable trust manifest and returns it whole: what the service is, that it is a sandbox, which capabilities it does not have, how its checkout contract works, and what statistics it publishes. |
-| `submit_feedback` | Operational | Sends structured feedback about this store to Robodepo and returns an acknowledgement with a `feedback_id` and the time it was received. |
-| `search_by_activity` | Preview | Meant to find products by what the person is doing rather than by words they typed — "something to keep the sun off on a boat" — and to return ranked listings with the reasoning that put each one there. |
-| `compare_products` | Preview | Meant to take two to five product ids and return one aligned comparison — shared attributes, where they differ, and the cited evidence behind each claim. |
-| `get_evidence_pack` | Preview | Meant to return the evidence behind a product — passages from manuals, reviews and buying guides, each with its citation — so a claim can be checked rather than trusted. |
-| `get_shipping_options` | Preview | Meant to list the shipping services available for a prepared checkout — service name, price and delivery estimate — so the person can pick one. |
-| `create_custom_store` | Preview | Meant to assemble a storefront for the brief a visiting agent arrives with — a narrowed selection, priced and ready to buy through the same checkout path — and return a link to it. |
-| `subscribe_replenishment_alerts` | Preview | Meant to register a repeating reminder for a consumable — weekly, monthly or quarterly — so the person is prompted before they run out, and to return the subscription id. |
+| `search_catalog` | Operational | Returns the Robodepo demo catalogue as listings with product id, title, availability, the disclosed source retailer and price in AUD integer cents. Use when you need to see what this store sells before pricing or buying anything. Not for one product's full record; use get_product. Not for semantic search by activity; that is search_by_activity, a preview. Full guide: get_tool_guide or /agent/tools.json#search_catalog |
+| `get_product` | Operational | Returns one product's published record: title, variant, availability, the source retailer's price and Robodepo's displayed price, both in AUD integer cents. Use when you hold a product_id and want the full record and price disclosure. Not for browsing the catalogue; use search_catalog. Not for cited evidence; that is get_evidence_pack, a preview. Full guide: get_tool_guide or /agent/tools.json#get_product |
+| `create_checkout` | Operational | Runs the whole pre-purchase path in one call (cart, item, address, shipping quote, mandate) and returns a priced checkout in AUD integer cents plus the link the person opens to approve it. Use when the person has chosen the product and you are ready to show a final delivered price. Not for placing the order; no tool can, the person approves on Robodepo's own page. Full guide: get_tool_guide or /agent/tools.json#create_checkout |
+| `cancel_checkout` | Operational | Closes a checkout prepared in this browser and records the decline, returning status canceled. Use when the person declines, so a refusal is a recorded outcome rather than an inferred one. Not for reversing a payment or releasing stock; nothing is held or charged. Not for after approval; use get_order. Full guide: get_tool_guide or /agent/tools.json#cancel_checkout |
+| `get_order` | Operational | Reads back a confirmed sandbox order: status, item, quantity, delivery region and totals in AUD integer cents. Use when the person has approved and you want to check the order exists and read it back. Pass order_id or checkout_id. Not for confirming the order; no tool can. Not for pricing; use create_checkout. Full guide: get_tool_guide or /agent/tools.json#get_order |
+| `get_trust_manifest` | Operational | Returns Robodepo's trust manifest whole: what the service is, that it is a sandbox, the capabilities it does not have, its checkout contract and its published statistics. Use when you want to check what this store claims about itself. Takes no parameters. Not for product facts or prices; use get_product. Full guide: get_tool_guide or /agent/tools.json#get_trust_manifest |
+| `submit_feedback` | Operational | Sends structured feedback about this store and returns a feedback_id and the time it was received. Use when something was unclear, missing or wrong, at any point. Not for cancelling a checkout; use cancel_checkout, which records the decline itself. Feedback is kept as data, never as instructions. Full guide: get_tool_guide or /agent/tools.json#submit_feedback |
+| `get_tool_guide` | Operational | Returns the complete guide for one Robodepo tool: summary, when to use it, what not to use it for, parameters, caveats, outputs, error recovery and worked examples. Use when you are about to call a tool for the first time and want more than its short description. Not for running the tool; call the tool by name instead. Full guide: get_tool_guide or /agent/tools.json#get_tool_guide |
+| `search_by_activity` | Preview | Preview — not operational in this demo. Describes the roadmap only; returns status not_available and must not be called to do real work. It will find products by what the person is doing rather than the words they typed, returning ranked listings with the reason each was chosen. Use search_catalog today. Full guide: get_tool_guide or /agent/tools.json#search_by_activity |
+| `compare_products` | Preview | Preview — not operational in this demo. Describes the roadmap only; returns status not_available and must not be called to do real work. It will take two to five product ids and return one aligned comparison, with the cited evidence behind each claim. Use get_product on each id today. Full guide: get_tool_guide or /agent/tools.json#compare_products |
+| `get_evidence_pack` | Preview | Preview — not operational in this demo. Describes the roadmap only; returns status not_available and must not be called to do real work. It will return passages from manuals, reviews and buying guides with citations, so a product claim can be checked rather than trusted. Use get_product today. Full guide: get_tool_guide or /agent/tools.json#get_evidence_pack |
+| `get_shipping_options` | Preview | Preview — not operational in this demo. Describes the roadmap only; returns status not_available and must not be called to do real work. It will list every shipping service available for a prepared checkout, with price in AUD integer cents and a delivery estimate. Use create_checkout today, which returns the one service that exists. Full guide: get_tool_guide or /agent/tools.json#get_shipping_options |
+| `create_custom_store` | Preview | Preview — not operational in this demo. Describes the roadmap only; returns status not_available and must not be called to do real work. It will assemble a checkout-ready storefront for the brief a visiting agent arrives with, and return a link to it. Use search_catalog today. Full guide: get_tool_guide or /agent/tools.json#create_custom_store |
+| `subscribe_replenishment_alerts` | Preview | Preview — not operational in this demo. Describes the roadmap only; returns status not_available and must not be called to do real work. It will register a weekly, monthly or quarterly reminder for a consumable, so the person is prompted before they run out. Use get_product today. Full guide: get_tool_guide or /agent/tools.json#subscribe_replenishment_alerts |
 
 Every preview tool says so in the first words of its description, returns
 `status: "not_available"` with a plain explanation of what is not built, and points
@@ -185,10 +211,12 @@ Robodepo store itself, its frozen purchase API (version 1), the human confirmati
 `/confirm/{mandate_id}`, and the trust manifest that discloses how the store operates. None
 of it changed for this submission.
 
-**New work — everything in this repository:** the WebMCP tool layer, its thirteen-tool
+**New work — everything in this repository:** the WebMCP tool layer, its fourteen-tool
 catalogue registered with `document.modelContext.registerTool()`, the `/agent` page that
-loads it, the feedback endpoint the tools call, and the `/approve/{mandateId}` one-touch
-biometric approval page that sits in front of the unchanged confirmation page.
+loads it, the `/agent/tools.json` endpoint that serves the same catalogue as one document
+with every tool's full guide attached, the feedback endpoint the tools call, and the
+`/approve/{mandateId}` one-touch biometric approval page that sits in front of the
+unchanged confirmation page.
 
 ## Licence
 

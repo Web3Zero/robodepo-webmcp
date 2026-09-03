@@ -6,10 +6,20 @@
   --stone-900: #1c1917;
   --stone-800: #292524;
   --stone-700: #44403c;
+  --stone-600: #57534e;
+  --stone-500: #78716c;
   --stone-400: #a8a29e;
   --stone-300: #d6d3d1;
+  --stone-200: #e7e5e4;
   --stone-100: #f5f5f4;
+  --amber-200: #fde68a;
   --amber-300: #fcd34d;
+  --amber-400: #fbbf24;
+  --amber-500: #f59e0b;
+
+  --font-display: ui-serif, Georgia, "Times New Roman", serif;
+  --font-body: ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, monospace;
 }
 
 * {
@@ -18,60 +28,453 @@
 
 body {
   margin: 0;
-  padding: 3rem 1.5rem 5rem;
-  background: var(--stone-950);
+  padding: clamp(2rem, 4vw + 1rem, 3.5rem) clamp(1.1rem, 4vw, 1.75rem) 5rem;
+  background:
+    radial-gradient(ellipse 60% 40% at 18% -8%, rgba(252, 211, 77, 0.07), transparent 60%),
+    repeating-linear-gradient(
+      180deg,
+      rgba(245, 245, 244, 0.025) 0px,
+      rgba(245, 245, 244, 0.025) 1px,
+      transparent 1px,
+      transparent 72px
+    ),
+    var(--stone-950);
   color: var(--stone-100);
-  font: 16px/1.6 ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  font: 16px/1.65 var(--font-body);
+  -webkit-font-smoothing: antialiased;
 }
 
 main {
   margin: 0 auto;
-  max-width: 56rem;
+  max-width: 62rem;
+}
+
+img {
+  max-width: 100%;
+}
+
+/* ------------------------------ Hero ---------------------------------- */
+
+.hero {
+  max-width: 44rem;
 }
 
 .eyebrow {
   margin: 0;
   color: var(--amber-300);
-  font-size: 0.75rem;
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
   font-weight: 600;
   letter-spacing: 0.24em;
   text-transform: uppercase;
 }
 
 h1 {
-  margin: 1.5rem 0 0;
-  font-size: 2.75rem;
+  margin: 1.15rem 0 0;
+  max-width: 22ch;
+  font-family: var(--font-display);
+  font-size: clamp(2.05rem, 1.35rem + 3vw, 3.4rem);
   font-weight: 600;
-  letter-spacing: -0.02em;
+  line-height: 1.08;
+  letter-spacing: -0.01em;
+}
+
+.lede {
+  margin: 1.35rem 0 0;
+  max-width: 42rem;
+  color: var(--stone-300);
+  font-size: 1.08rem;
+  line-height: 1.65;
+}
+
+.hero-note {
+  margin: 0.85rem 0 0;
+  color: var(--stone-500);
+  font-size: 0.88rem;
+}
+
+.status-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.6rem;
+  margin: 1.75rem 0 0;
+  border: 1px solid var(--stone-700);
+  border-radius: 999px;
+  background: var(--stone-900);
+  padding: 0.5rem 1.1rem 0.5rem 0.9rem;
+  color: var(--stone-300);
+  font-size: 0.85rem;
+}
+
+.status-pill::before {
+  content: "";
+  flex: none;
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 50%;
+  background: var(--amber-300);
+  box-shadow: 0 0 0 3px rgba(252, 211, 77, 0.18);
+}
+
+/* --------------------------- Section rhythm ----------------------------- */
+
+section {
+  margin-top: 2.75rem;
+  border: 1px solid var(--stone-700);
+  background: var(--stone-900);
+  padding: 1.6rem 1.6rem 1.75rem;
+}
+
+.section-flat {
+  margin-top: 3.5rem;
+  border: 0;
+  border-top: 1px solid var(--stone-800);
+  background: transparent;
+  padding: 2.5rem 0 0;
+}
+
+.section-head {
+  display: flex;
+  align-items: baseline;
+  gap: 0.85rem;
+  margin: 0 0 0.5rem;
+}
+
+.kicker {
+  flex: none;
+  color: var(--amber-300);
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+  letter-spacing: 0.08em;
 }
 
 h2 {
   margin: 0 0 0.75rem;
-  font-size: 1.1rem;
+  font-family: var(--font-display);
+  font-size: 1.4rem;
   font-weight: 600;
+  letter-spacing: -0.005em;
 }
 
-.lede {
-  max-width: 44rem;
+.section-head h2 {
+  margin: 0;
+}
+
+.section-intro {
+  margin: 0 0 0.25rem;
+  max-width: 46rem;
+  color: var(--stone-400);
+  font-size: 0.95rem;
+}
+
+/* ------------------------ Try the complete journey ----------------------- */
+
+.section-try {
+  border-color: var(--stone-700);
+}
+
+.prompt-block {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.85rem;
+  margin-top: 1.1rem;
+}
+
+.prompt {
+  margin: 0;
+  width: 100%;
+  border: 1px solid var(--stone-700);
+  background: var(--stone-950);
+  padding: 1.1rem 1.25rem;
+  overflow-x: auto;
+  color: var(--stone-100);
+  font-family: var(--font-mono);
+  font-size: 0.88rem;
+  line-height: 1.65;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.copy-button {
+  margin-top: 0;
+  border: 1px solid var(--amber-300);
+  background: transparent;
+  padding: 0.45rem 1rem;
+  color: var(--amber-300);
+  font: inherit;
+  font-size: 0.78rem;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: background-color 120ms ease, color 120ms ease;
+}
+
+.copy-button:hover {
+  background: var(--amber-300);
+  color: var(--stone-950);
+}
+
+.journey {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  margin: 1.85rem 0 0;
+  padding: 0;
+  list-style: none;
+  border-top: 1px solid var(--stone-700);
+}
+
+.journey li {
+  border-left: 1px solid var(--stone-700);
+  padding: 1rem 1rem 0.1rem;
+}
+
+.journey li:first-child {
+  border-left: 0;
+  padding-left: 0;
+}
+
+.journey-step {
+  display: block;
+  color: var(--amber-300);
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  letter-spacing: 0.08em;
+}
+
+.journey-label {
+  display: block;
+  margin-top: 0.4rem;
+  color: var(--stone-200);
+  font-size: 0.92rem;
+  line-height: 1.35;
+}
+
+@media (max-width: 720px) {
+  .journey {
+    grid-template-columns: 1fr;
+    border-top: 0;
+  }
+
+  .journey li {
+    border-left: 2px solid var(--stone-700);
+    padding: 0 0 1.1rem 1.1rem;
+  }
+
+  .journey li:first-child {
+    padding-left: 1.1rem;
+  }
+}
+
+/* --------------------------------- Handoff -------------------------------- */
+
+#handoff {
+  border-color: var(--amber-300);
+  background: var(--stone-900);
+}
+
+#handoff[hidden] {
+  display: none;
+}
+
+#handoff h2 {
+  margin-top: 0.5rem;
+}
+
+dl.handoff {
+  display: grid;
+  margin: 1rem 0 0;
+  grid-template-columns: max-content 1fr;
+  gap: 0.5rem 1.5rem;
+}
+
+dl.handoff dt {
+  color: var(--stone-400);
+  font-size: 0.85rem;
+}
+
+dl.handoff dd {
+  margin: 0;
+  font-size: 0.98rem;
+}
+
+/* ------------------------------- Buttons ---------------------------------- */
+
+button {
+  margin-top: 1.25rem;
+  border: 0;
+  background: var(--amber-300);
+  padding: 0.75rem 1.25rem;
+  color: var(--stone-950);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+button:hover {
+  background: var(--amber-400);
+}
+
+.handoff-button {
+  margin-top: 1.4rem;
+}
+
+/* ----------------------------- Proof / roadmap grids ----------------------- */
+
+.proof-grid,
+.roadmap-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1rem;
+  margin-top: 1.5rem;
+}
+
+@media (min-width: 640px) {
+  .proof-grid,
+  .roadmap-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+@media (min-width: 1024px) {
+  .proof-grid,
+  .roadmap-grid {
+    grid-template-columns: repeat(5, 1fr);
+  }
+}
+
+.proof-card,
+.roadmap-card {
+  border: 1px solid var(--stone-700);
+  background: var(--stone-900);
+  padding: 1.3rem;
+}
+
+@media (min-width: 1024px) {
+  .proof-card,
+  .roadmap-card {
+    padding: 1.1rem 1rem;
+  }
+}
+
+.proof-card h3,
+.roadmap-card h3 {
+  margin: 0 0 0.6rem;
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--stone-100);
+}
+
+.proof-card p,
+.roadmap-card p {
+  margin: 0;
   color: var(--stone-300);
+  font-size: 0.92rem;
+  line-height: 1.55;
+}
+
+.roadmap-badge {
+  display: inline-block;
+  margin-bottom: 0.85rem;
+  border: 1px solid var(--stone-600);
+  padding: 0.15rem 0.55rem;
+  color: var(--stone-400);
+  font-family: var(--font-mono);
+  font-size: 0.66rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.roadmap-badge.preview {
+  border-color: var(--amber-300);
+  color: var(--amber-300);
+}
+
+.roadmap-badge.roadmap {
+  border-color: var(--stone-500);
+  color: var(--stone-300);
+}
+
+.roadmap-card p {
+  margin-bottom: 0.9rem;
+}
+
+.roadmap-tools {
+  margin: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.roadmap-tools code {
+  border: 1px solid var(--stone-700);
+  background: var(--stone-950);
+  padding: 0.2rem 0.5rem;
+  color: var(--amber-200);
+  font-size: 0.7rem;
+}
+
+/* --------------------------------- Details -------------------------------- */
+
+details {
+  border: 1px solid var(--stone-700);
+  background: var(--stone-900);
+}
+
+details > summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1rem 1.25rem;
+  color: var(--stone-100);
+  font-weight: 600;
+  font-size: 0.95rem;
+  list-style: none;
+  cursor: pointer;
+}
+
+details > summary::-webkit-details-marker {
+  display: none;
+}
+
+details > summary::after {
+  flex: none;
+  color: var(--amber-300);
+  content: "+";
+  font-family: var(--font-mono);
+  font-size: 1.1rem;
+}
+
+details[open] > summary::after {
+  content: "\2212";
+}
+
+details > summary:focus-visible {
+  outline: 2px solid var(--stone-100);
+  outline-offset: -2px;
+}
+
+.security-detail > #why-human-confirms {
+  margin: 0;
+  border: 0;
+  border-top: 1px solid var(--stone-800);
+  background: transparent;
+  padding: 1.35rem 1.25rem 1.6rem;
+}
+
+.security-detail #why-human-confirms h2 {
+  margin-top: 0;
   font-size: 1.05rem;
 }
 
-section {
-  margin-top: 2.5rem;
-  border: 1px solid var(--stone-700);
-  background: var(--stone-900);
-  padding: 1.5rem;
+.tool-catalogue > ul.tools,
+.activity-log > ol.activity {
+  padding: 0.25rem 1.25rem 1.35rem;
 }
 
-#webmcp-status {
-  margin: 2rem 0 0;
-  border-left: 3px solid var(--amber-300);
-  padding: 0.75rem 1rem;
-  background: var(--stone-900);
-  color: var(--stone-300);
-  font-size: 0.95rem;
-}
+/* ---------------------------------- Tools --------------------------------- */
 
 ul.tools {
   margin: 0;
@@ -89,8 +492,9 @@ ul.tools li:first-child {
 }
 
 .tool-name {
-  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-family: var(--font-mono);
   font-size: 0.95rem;
+  overflow-wrap: anywhere;
 }
 
 .badge {
@@ -116,44 +520,62 @@ ul.tools li:first-child {
   margin: 0.4rem 0 0;
   color: var(--stone-300);
   font-size: 0.9rem;
+  overflow-wrap: anywhere;
 }
 
-#handoff[hidden] {
-  display: none;
+.tool-guide {
+  margin: 0.65rem 0 0;
+  border: 1px solid var(--stone-800);
+  background: var(--stone-950);
 }
 
-dl.handoff {
-  display: grid;
-  margin: 0;
-  grid-template-columns: max-content 1fr;
-  gap: 0.35rem 1.25rem;
+.tool-guide > summary {
+  padding: 0.5rem 0.75rem;
+  color: var(--amber-300);
+  font-size: 0.78rem;
+  font-weight: 600;
 }
 
-dl.handoff dt {
-  color: var(--stone-400);
+.tool-guide > summary::after {
   font-size: 0.85rem;
 }
 
-dl.handoff dd {
-  margin: 0;
-  font-size: 0.95rem;
-}
-
-button {
-  margin-top: 1.25rem;
-  border: 0;
-  background: var(--amber-300);
-  padding: 0.75rem 1.25rem;
-  color: var(--stone-950);
-  font: inherit;
+.tool-guide h4 {
+  margin: 0.9rem 0.9rem 0.3rem;
+  color: var(--stone-200);
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
   font-weight: 600;
-  cursor: pointer;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
 }
 
-button:focus-visible {
-  outline: 2px solid var(--stone-100);
-  outline-offset: 2px;
+.tool-guide h4:first-of-type {
+  margin-top: 0.85rem;
 }
+
+.tool-guide p {
+  margin: 0 0.9rem 0.7rem;
+  color: var(--stone-300);
+  font-size: 0.85rem;
+  line-height: 1.55;
+  overflow-wrap: anywhere;
+}
+
+.tool-guide pre.guide-example {
+  margin: 0 0.9rem 0.9rem;
+  border: 1px solid var(--stone-700);
+  background: var(--stone-900);
+  padding: 0.75rem 0.9rem;
+  overflow-x: auto;
+  color: var(--stone-100);
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+  line-height: 1.55;
+  white-space: pre;
+}
+
+/* --------------------------------- Notes ---------------------------------- */
 
 .note {
   margin: 1rem 0 0;
@@ -161,11 +583,13 @@ button:focus-visible {
   font-size: 0.85rem;
 }
 
+/* -------------------------------- Activity -------------------------------- */
+
 ol.activity {
   margin: 0;
   padding: 0;
   list-style: none;
-  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-family: var(--font-mono);
   font-size: 0.85rem;
 }
 
@@ -179,16 +603,28 @@ ol.activity li:first-child {
   border-top: 0;
 }
 
+/* --------------------------------- Footer --------------------------------- */
+
 footer {
-  margin-top: 3rem;
+  margin-top: 3.5rem;
   border-top: 1px solid var(--stone-800);
-  padding-top: 1.25rem;
+  padding-top: 1.35rem;
   color: var(--stone-400);
   font-size: 0.85rem;
 }
 
+footer p {
+  margin: 0 0 0.5rem;
+}
+
+footer p:last-child {
+  margin-bottom: 0;
+}
+
+/* --------------------------------- Generic --------------------------------- */
+
 code {
-  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-family: var(--font-mono);
   font-size: 0.9em;
 }
 
@@ -231,4 +667,40 @@ a {
   color: var(--amber-300);
   text-decoration-thickness: 1px;
   text-underline-offset: 3px;
+}
+
+a:hover {
+  color: var(--amber-200);
+}
+
+:focus-visible {
+  outline: 2px solid var(--stone-100);
+  outline-offset: 2px;
+}
+
+@media (max-width: 480px) {
+  h1 {
+    max-width: none;
+  }
+
+  section {
+    padding: 1.25rem 1.1rem 1.4rem;
+  }
+
+  .tool-name {
+    display: block;
+  }
+
+  .badge {
+    margin-left: 0;
+    margin-top: 0.35rem;
+    display: inline-block;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+  }
 }
