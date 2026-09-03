@@ -235,6 +235,10 @@ confirmation the standalone page always has, and the panel becomes a styled "Ord
 confirmed" card in place. Because the page never navigates away, the tools stay
 registered and the agent can read the order straight back with `get_order`.
 
+The button itself carries a small fingerprint mark whenever the browser offers a
+platform authenticator, and drops it when the browser doesn't, so the mark never
+promises a check the device can't actually do.
+
 The touch proves a person is present at the device; it is not a server-side control and
 never reaches the server itself. Nothing derived from it is sent to Robodepo or anywhere
 else, and the server has no way to know the gesture happened; the same run cookie,
