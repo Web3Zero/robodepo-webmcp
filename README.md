@@ -218,6 +218,42 @@ check that actually protects the purchase is unchanged and still runs server-sid
 cookie, the confirmation cookie, the single-use CSRF value, the single-use idempotency key,
 the same-origin requirement and the five-minute confirmation session.
 
+## How this is different
+
+What exists today splits into two camps. One camp is merchant-side tooling: Shopify's
+WebMCP and UCP integration, Google's UCP, Microsoft's Copilot Checkout, Perplexity's
+merchant program, Firmly's no-code connector. Each asks the store to do something first:
+install WebMCP-capable Liquid, connect a Merchant Center account, join a program, or run
+an onboarding flow. A store that has never heard of agentic commerce is invisible to all
+of them. The other camp is buyer-side proxying: Amazon's Buy for Me, Rye and Zinc. No
+merchant cooperation needed, because they automate the store's ordinary human checkout
+using the shopper's own saved details, which works as long as the target site's checkout
+form doesn't change.
+
+Robodepo sits outside both camps, behaving like the proxies in one respect and the
+merchant tooling in another, without either dependency:
+
+- The shop does nothing. Robodepo lists disclosed-source products and runs the whole
+  purchase on the shop's behalf, so a store that never installed WebMCP, never joined a
+  merchant program and never heard the word agent is still agent-completable through
+  Robodepo.
+- The agent gets information it cannot get elsewhere in one place: source retailer and
+  price disclosed side by side; evidence from manuals, reviews and permitted transcripts
+  is on the roadmap; a shortlist built for each request is on the roadmap.
+- The human keeps the irreversible step by construction, not by policy: no tool call can
+  place an order, only a person on Robodepo's own confirmation page can.
+- Completion is measured, not claimed. A sealed evaluation rig runs real agents through
+  the real purchase path and audits the results, so "it works for agents" is a checked
+  result, not a claim.
+- Nothing to install, for the agent, the human or the shop: WebMCP tools sit on the page,
+  and underneath is plain HTTPS any agent can call.
+- The tool names, `search_catalog`, `get_product`, `create_checkout`, `cancel_checkout`,
+  `get_order`, match the dialect UCP, Shopify and ACP have already converged on.
+
+The nearest things are protocols that ask every shop to integrate, or agents that scrape.
+Robodepo is the store that already did the work. The full sourced comparison, including
+who was checked and when, is in [`docs/story.md`](./docs/story.md).
+
 ## Prior work vs new work
 
 **Prior work (not in this repository, built and live before this submission):** the
