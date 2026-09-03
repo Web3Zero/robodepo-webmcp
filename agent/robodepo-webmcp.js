@@ -469,21 +469,22 @@ export const TOOLS = Object.freeze([
     name: "get_product",
     title: "Read one product record",
     kind: "operational",
-    description: "Returns one product's published record: title, variant, availability, the source retailer's price and Robodepo's displayed price, both in AUD integer cents. Use when you hold a product_id and want the full record and price disclosure. Not for browsing the catalogue; use search_catalog. Not for cited evidence; that is get_evidence_pack, a preview. Full guide: get_tool_guide or /agent/tools.json#get_product",
+    description: "Returns one product's published record: title, variant, availability, the source retailer's price and Robodepo's displayed price, both in AUD integer cents. Use when you hold a product_id and want the full record and price disclosure. Not for browsing the catalogue; use search_catalog. include_evidence is a roadmap field and is ignored today. Full guide: get_tool_guide or /agent/tools.json#get_product",
     guide: {
       "summary": "Returns every published field for one product: title, variant, availability, the source retailer's price and Robodepo's displayed price, both as AUD integer cents, plus a formatted price string such as A$113.85 and the source disclosure.",
       "use_when": "Use this when you hold a `product_id` from `search_catalog` and want the full record, including the price disclosure, before pricing a checkout.",
-      "do_not_use": "Do not use this for browsing the whole catalogue; use `search_catalog` instead. Do not use it for cited evidence from manuals, reviews or guides; that is `get_evidence_pack`, which is a preview and does not work yet.",
-      "parameters": "`product_id` comes from `search_catalog`. The demo catalogue's only product id is `holiday-bucket-beige-canvas-l-xl-beige`, and any other id is refused rather than guessed at. `response_format` chooses how much of the source disclosure comes back: `concise` for the retailer's name and the price-may-differ flag, `detailed` for the whole `source` block.",
+      "do_not_use": "Do not use this for browsing the whole catalogue; use `search_catalog` instead. There is no separate tool to fetch evidence: evidence is not a second call, it belongs on the product, so the roadmap attaches it here through `include_evidence` rather than anywhere else.",
+      "parameters": "`product_id` comes from `search_catalog`. The demo catalogue's only product id is `holiday-bucket-beige-canvas-l-xl-beige`, and any other id is refused rather than guessed at. `response_format` chooses how much of the source disclosure comes back: `concise` for the retailer's name and the price-may-differ flag, `detailed` for the whole `source` block. `include_evidence` is a roadmap field: when it is built, passing `true` will attach the evidence pack — specifications, manuals, review themes and permitted YouTube transcript evidence, each cited and carrying its freshness. It is not available in this demo; today it is ignored, and passing `true` adds an `evidence_not_available` message saying so rather than quietly returning a product with no evidence on it.",
       "caveats": "It returns no shipping cost, no delivery estimate and no stock count. It reads a stored snapshot, holds no handle and places no reservation, so the price it shows can still move before you create a checkout.",
-      "outputs": "`resource.product_id` feeds `create_checkout` as `line_items[0].product_id`. `resource.source_price_cents` and `resource.display_price_cents` are both returned: the displayed price sits above the source retailer's price, and Robodepo publishes both rather than hiding the difference. Under `detailed`, `resource.source.retailer`, `resource.source.url` and `resource.source.last_checked_at` say where the item comes from and when it was last read, and `resource.source.price_may_differ` warns that the retailer's own price can move; under `concise` that block is replaced by `resource.source_retailer` and `resource.price_may_differ`, so the disclosure is shortened but never dropped.",
+      "outputs": "`resource.product_id` feeds `create_checkout` as `line_items[0].product_id`. `resource.source_price_cents` and `resource.display_price_cents` are both returned: the displayed price sits above the source retailer's price, and Robodepo publishes both rather than hiding the difference. Under `detailed`, `resource.source.retailer`, `resource.source.url` and `resource.source.last_checked_at` say where the item comes from and when it was last read, and `resource.source.price_may_differ` warns that the retailer's own price can move; under `concise` that block is replaced by `resource.source_retailer` and `resource.price_may_differ`, so the disclosure is shortened but never dropped. No `resource.evidence` is returned by any version of this tool today; `include_evidence: true` returns the ordinary record plus the `evidence_not_available` message.",
       "error_recovery": "`product_not_found` means that id is not in this catalogue, so call `search_catalog`; `out_of_stock` means the source variant is unavailable, so call `search_catalog` and tell the person; `price_not_fresh` means no validated snapshot exists, so retry in a minute; `rate_limited` means the public-read budget is spent, so wait 60 seconds; `network_error` means the request never left the browser, so call this tool again.",
       "examples": [
         {
           "title": "Read the demo product with the full source block",
           "input": {
             "product_id": "holiday-bucket-beige-canvas-l-xl-beige",
-            "response_format": "detailed"
+            "response_format": "detailed",
+            "include_evidence": null
           }
         }
       ]
@@ -504,11 +505,19 @@ export const TOOLS = Object.freeze([
           "maxLength": 200,
           "description": "The product id returned by `search_catalog`. The demo catalogue's only value is `holiday-bucket-beige-canvas-l-xl-beige`."
         },
-        "response_format": RESPONSE_FORMAT_PROPERTY
+        "response_format": RESPONSE_FORMAT_PROPERTY,
+        "include_evidence": {
+          "type": [
+            "boolean",
+            "null"
+          ],
+          "description": "Roadmap: when true, a cited, dated evidence pack will be attached. Not available in this demo; today it is ignored and a message says so."
+        }
       },
       "required": [
         "product_id",
-        "response_format"
+        "response_format",
+        "include_evidence"
       ],
       "additionalProperties": false
     },
@@ -973,18 +982,18 @@ export const TOOLS = Object.freeze([
   },
   {
     name: "search_by_activity",
-    title: "Preview: find products by what the person is doing",
+    title: "Preview: a custom storefront for the request",
     kind: "preview",
     recover: ["search_catalog"],
-    notBuilt: "Semantic search by function or activity is not built. Nothing behind this tool interprets an activity, and no product is matched to one.",
-    description: "Preview — not operational in this demo. Describes the roadmap only; returns status not_available and must not be called to do real work. It will find products by what the person is doing rather than the words they typed, returning ranked listings with the reason each was chosen. Use search_catalog today. Full guide: get_tool_guide or /agent/tools.json#search_by_activity",
+    notBuilt: "Search that returns a custom storefront is not built. Nothing behind this tool interprets an activity, assembles a shortlist, or explains why an item is on it.",
+    description: "Preview — not operational in this demo. Describes the roadmap only; returns status not_available and must not be called to do real work. It will answer a request with a custom storefront: a short, checkout-ready shortlist chosen from what the person is doing, each item carrying the reason it is on the list, instead of thousands of pages to read. Use search_catalog today. Full guide: get_tool_guide or /agent/tools.json#search_by_activity",
     guide: {
-      "summary": "Preview — not operational in this demo. It is meant to find products by what the person is doing rather than by words they typed — \"something to keep the sun off on a boat\" — and to return ranked listings with the reasoning that put each one there.",
-      "use_when": "Use this when it ships and the person describes a situation rather than a product.",
+      "summary": "Preview — not operational in this demo. It is meant to answer a request with a custom storefront rather than a result page: a short, checkout-ready shortlist assembled from what the person is actually doing — \"something to keep the sun off on a boat\" — each item carrying the reason it is on the list. A custom store is not something an agent should have to ask for; it is what a search returns.",
+      "use_when": "Use this when it ships and the person describes a situation rather than a product, and you want a shortlist you can buy from rather than pages to read.",
       "do_not_use": "Do not use this for anything today; use `search_catalog` instead, which returns the demo catalogue and leaves relevance to your judgement, and `get_product` for the full record of a listing.",
-      "parameters": "`activity` would be the situation in the person's own words, and `constraints` any limits such as a budget or a date. Neither is read by anything today.",
-      "caveats": "This is the capability Robodepo's roadmap points at, and it is named here so the shape of the intent is visible — but it does not work, and `search_catalog` is not a quiet version of it: `search_catalog` filters nothing and ranks nothing across a one-product demo catalogue.",
-      "outputs": "this tool returns `status: \"not_available\"` with a message saying plainly what is not built. There are no listings, no ranking and no ids to feed onward. It does return `resource.roadmap`, a sketch of the intended inputs, output fields and response shape, marked `illustrative: true` — that example is not live data and nothing in it is built.",
+      "parameters": "`activity` would be the situation in the person's own words, and `constraints` any limits such as a budget or a date — both shaping the storefront rather than filtering a result page. Neither is read by anything today.",
+      "caveats": "This is the capability Robodepo's roadmap points at, and it is named here so the shape of the intent is visible — but it does not work, and `search_catalog` is not a quiet version of it: `search_catalog` filters nothing and ranks nothing across a one-product demo catalogue. The full catalogue would stay open behind any storefront this returned; a shortlist is a starting point, not a wall.",
+      "outputs": "this tool returns `status: \"not_available\"` with a message saying plainly what is not built. There is no storefront, no shortlist and no ids to feed onward. It does return `resource.roadmap`, a sketch of the intended inputs, output fields and response shape, marked `illustrative: true` — that example is not live data and nothing in it is built.",
       "error_recovery": "there is no error to recover from and no retry that will help. Call `search_catalog` to see what the store actually sells, then `submit_feedback` if the missing capability is what you needed.",
       "examples": [
         {
@@ -1084,53 +1093,6 @@ export const TOOLS = Object.freeze([
     },
   },
   {
-    name: "get_evidence_pack",
-    title: "Preview: cited evidence for a product",
-    kind: "preview",
-    recover: ["get_product"],
-    notBuilt: "Evidence packs are not built. No manual, review or guide is indexed, and no citation exists to return.",
-    description: "Preview — not operational in this demo. Describes the roadmap only; returns status not_available and must not be called to do real work. It will return passages from manuals, reviews and buying guides with citations, so a product claim can be checked rather than trusted. Use get_product today. Full guide: get_tool_guide or /agent/tools.json#get_evidence_pack",
-    guide: {
-      "summary": "Preview — not operational in this demo. It is meant to return the evidence behind a product — passages from manuals, reviews and buying guides, each with its citation — so a claim can be checked rather than trusted.",
-      "use_when": "Use this when it ships and the person asks whether a product really does something.",
-      "do_not_use": "Do not use this for anything today; use `get_product` instead, which returns only the fields Robodepo actually publishes and discloses the source retailer, and `get_trust_manifest` for what the store claims about itself.",
-      "parameters": "`product_id` would come from `search_catalog` or `get_product`. It is validated for shape and then ignored, because there is nothing to look up.",
-      "caveats": "Robodepo publishes no product claim it cannot source, which is exactly why this tool returns nothing rather than a plausible summary. Calling it changes nothing and costs nothing.",
-      "outputs": "this tool returns `status: \"not_available\"` with a message saying what is missing. There is no evidence array, no citations and nothing to feed onward. It does return `resource.roadmap`, a sketch of the intended inputs, output fields and response shape, marked `illustrative: true` — that example is not live data and nothing in it is built.",
-      "error_recovery": "there is no error and no retry that helps. Call `get_product` for the published record, then `submit_feedback` if the missing evidence is what blocked the person.",
-      "examples": [
-        {
-          "title": "What a call would look like once built",
-          "input": {
-            "product_id": "prod_example"
-          }
-        }
-      ]
-    },
-    annotations: {
-      "readOnlyHint": true,
-      "untrustedContentHint": false,
-      "destructiveHint": false,
-      "idempotentHint": true,
-      "openWorldHint": false
-    },
-    inputSchema: {
-      "type": "object",
-      "properties": {
-        "product_id": {
-          "type": "string",
-          "minLength": 1,
-          "maxLength": 200,
-          "description": "The product id from `search_catalog` or `get_product`."
-        }
-      },
-      "required": [
-        "product_id"
-      ],
-      "additionalProperties": false
-    },
-  },
-  {
     name: "get_shipping_options",
     title: "Preview: alternative shipping services",
     kind: "preview",
@@ -1173,53 +1135,6 @@ export const TOOLS = Object.freeze([
       },
       "required": [
         "checkout_id"
-      ],
-      "additionalProperties": false
-    },
-  },
-  {
-    name: "create_custom_store",
-    title: "Preview: a storefront assembled for this agent's brief",
-    kind: "preview",
-    recover: ["search_catalog"],
-    notBuilt: "Per-agent custom storefronts are not built. No brief is read, no selection is assembled and no storefront is created.",
-    description: "Preview — not operational in this demo. Describes the roadmap only; returns status not_available and must not be called to do real work. It will assemble a checkout-ready storefront for the brief a visiting agent arrives with, and return a link to it. Use search_catalog today. Full guide: get_tool_guide or /agent/tools.json#create_custom_store",
-    guide: {
-      "summary": "Preview — not operational in this demo. It is meant to assemble a storefront for the brief a visiting agent arrives with — a narrowed selection, priced and ready to buy through the same checkout path — and return a link to it.",
-      "use_when": "Use this when it ships and the person's need is broader than one product.",
-      "do_not_use": "Do not use this for anything today; use `search_catalog` instead to see the whole demo catalogue, which is one product, and `create_checkout` to buy it.",
-      "parameters": "`brief` would be what the person wants, up to 500 characters. It is checked for shape and then discarded; nothing reads it and nothing is stored.",
-      "caveats": "This is the most ambitious item on the roadmap and the least built. It is listed to show the direction, and it says so in its first words rather than returning an empty storefront that looks like a real one.",
-      "outputs": "this tool returns `status: \"not_available\"` with a plain explanation. There is no storefront, no link and nothing to feed onward. It does return `resource.roadmap`, a sketch of the intended inputs, output fields and response shape, marked `illustrative: true` — that example is not live data and nothing in it is built.",
-      "error_recovery": "there is no error and no retry that helps. Call `search_catalog`, then `submit_feedback` to say what brief you would have given it.",
-      "examples": [
-        {
-          "title": "What a call would look like once built",
-          "input": {
-            "brief": "Sun protection for a week on the water"
-          }
-        }
-      ]
-    },
-    annotations: {
-      "readOnlyHint": true,
-      "untrustedContentHint": false,
-      "destructiveHint": false,
-      "idempotentHint": true,
-      "openWorldHint": false
-    },
-    inputSchema: {
-      "type": "object",
-      "properties": {
-        "brief": {
-          "type": "string",
-          "minLength": 1,
-          "maxLength": 500,
-          "description": "What the person wants the storefront to cover, up to 500 characters."
-        }
-      },
-      "required": [
-        "brief"
       ],
       "additionalProperties": false
     },
@@ -1342,21 +1257,21 @@ export function toolGuide(name) {
 const PREVIEW_ROADMAPS = Object.freeze({
   search_by_activity: {
     what_it_will_do:
-      "Find products by what the person is doing rather than by the words they typed, and return ranked listings with the reason each one was chosen.",
+      "Answer a request with a custom storefront: a short, checkout-ready shortlist chosen from what the person is doing, each item carrying the reason it is on the list, with the full catalogue still open behind it.",
     planned_inputs: ["activity", "constraints", "limit", "response_format"],
     planned_output_fields: [
-      "resource.query_understanding",
-      "resource.listings[].product_id",
-      "resource.listings[].title",
-      "resource.listings[].display_price_cents",
-      "resource.listings[].match_reason",
-      "resource.listings[].confidence",
+      "resource.storefront.request_understood_as",
+      "resource.storefront.listings[].product_id",
+      "resource.storefront.listings[].title",
+      "resource.storefront.listings[].display_price_cents",
+      "resource.storefront.listings[].chosen_because",
+      "resource.storefront.full_catalogue_url",
     ],
     illustrative_response: {
       status: "ok",
       resource: {
-        type: "listings",
-        listings: [{ product_id: "prod_example", match_reason: "Why this fits the activity." }],
+        type: "storefront",
+        listings: [{ product_id: "prod_example", chosen_because: "Why this is on the shortlist." }],
       },
     },
     illustrative: true,
@@ -1381,27 +1296,6 @@ const PREVIEW_ROADMAPS = Object.freeze({
     },
     illustrative: true,
   },
-  get_evidence_pack: {
-    what_it_will_do:
-      "Return the evidence behind a product — passages from manuals, reviews and buying guides, each with its citation — so a claim can be checked rather than trusted.",
-    planned_inputs: ["product_id", "claim", "response_format"],
-    planned_output_fields: [
-      "resource.evidence[].claim",
-      "resource.evidence[].passage",
-      "resource.evidence[].source_type",
-      "resource.evidence[].source_url",
-      "resource.evidence[].retrieved_at",
-      "resource.unsupported_claims[]",
-    ],
-    illustrative_response: {
-      status: "ok",
-      resource: {
-        type: "evidence_pack",
-        evidence: [{ claim: "The claim asked about.", source_type: "manual", source_url: null }],
-      },
-    },
-    illustrative: true,
-  },
   get_shipping_options: {
     what_it_will_do:
       "List every shipping service available for a prepared checkout, with its price in AUD integer cents and a delivery estimate, so the person can choose one.",
@@ -1419,26 +1313,6 @@ const PREVIEW_ROADMAPS = Object.freeze({
       resource: {
         type: "shipping_options",
         options: [{ shipping_quote_id: "quote_example", service: "service_name", shipping_cents: null }],
-      },
-    },
-    illustrative: true,
-  },
-  create_custom_store: {
-    what_it_will_do:
-      "Assemble a storefront for the brief a visiting agent arrives with — a narrowed selection, priced and buyable through the same checkout path — and return a link to it.",
-    planned_inputs: ["brief", "budget_ceiling_cents", "limit"],
-    planned_output_fields: [
-      "resource.store.store_id",
-      "resource.store.url",
-      "resource.store.brief_understood_as",
-      "resource.store.listings[]",
-      "resource.store.expires_at",
-    ],
-    illustrative_response: {
-      status: "ok",
-      resource: {
-        type: "custom_store",
-        store: { store_id: "store_example", url: "/s/store_example", expires_at: null },
       },
     },
     illustrative: true,
@@ -1557,7 +1431,7 @@ export function createRobodepoTools(options = {}) {
         return {
           tool: "get_product",
           why: "Read one product's full record, including both prices.",
-          args_hint: { product_id: PRODUCT_ID },
+          args_hint: { product_id: PRODUCT_ID, include_evidence: null },
         };
       case "create_checkout":
         return {
@@ -1878,6 +1752,28 @@ export function createRobodepoTools(options = {}) {
     const product = result.data ?? {};
     const { source, ...withoutSource } = product;
     const detailed = wantsDetail(input);
+    const productMessages = [
+      message(
+        "info",
+        "price_disclosure",
+        "recoverable",
+        null,
+        "Both prices are published: the displayed price sits above the source retailer's, and the retailer's own price can move.",
+      ),
+    ];
+    if (input?.include_evidence === true) {
+      // Asked for something the roadmap describes and this demo does not have.
+      // Saying so is the whole reason the field exists before it is built.
+      productMessages.push(
+        message(
+          "info",
+          "evidence_not_available",
+          "recoverable",
+          "$.include_evidence",
+          "Evidence packs are not built. This record carries no specifications, manuals, review themes or cited transcript evidence, and the field was ignored.",
+        ),
+      );
+    }
     return buildEnvelope({
       status: "ok",
       resource: {
@@ -1888,15 +1784,7 @@ export function createRobodepoTools(options = {}) {
         formatted_source_price: formatAud(product.source_price_cents),
         transaction_mode: "sandbox",
       },
-      messages: [
-        message(
-          "info",
-          "price_disclosure",
-          "recoverable",
-          null,
-          "Both prices are published: the displayed price sits above the source retailer's, and the retailer's own price can move.",
-        ),
-      ],
+      messages: productMessages,
       next_actions: computeNextActions(["create_checkout", "search_catalog"], "get_product"),
       links: [trustManifestLink()],
       instructions: {
@@ -2859,7 +2747,7 @@ export function mountAgentPage(tools, doc, registration) {
     const note = doc.createElement("p");
     note.className = "note";
     note.textContent =
-      "The person approves on Robodepo's own page. No tool can submit it.";
+      "The human approves on Robodepo's own page. No tool can do it for them.";
 
     handoffNode.append(kicker, heading, list, button, note);
     handoffNode.hidden = false;

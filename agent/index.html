@@ -37,32 +37,37 @@
 
 <section class="hero">
 <h1>Agents can find products. They still fail at checkout.</h1>
-<p class="hero-sub">Robodepo is a store built for AI shopping agents: trustworthy product information, one call to a prepared order, and one final decision that stays with you.</p>
+<p class="hero-sub">Robodepo is a store built for AI shopping agents: trustworthy product information, one call to a prepared order, and one final decision that stays with the human.</p>
 <p id="webmcp-status" class="status-pill">Checking this browser for WebMCP&#8230;</p>
 </section>
 
+<section class="why-it-works">
+<h2>Why this works when other checkouts don&#39;t</h2>
+<p>Every purchase path here has already been run by real OpenAI and Anthropic agents under sealed test conditions: prices committed before each run, every order independently audited, and any run where the shown price differs from the charged price thrown out. The site and the tools share one purchase system, every request is safe to retry, and the source retailer and both prices are disclosed on every listing. Putting WebMCP in front of an API is easy. Proving the checkout works for agents is the work.</p>
+</section>
+
 <section class="capabilities">
-<h2>What your agent can do here today</h2>
+<h2>What your agent can do here today through WebMCP</h2>
 <div class="capability-grid">
 <article class="capability-card">
 <h3>Find and check the product</h3>
-<p>The source retailer, the source price and Robodepo&#39;s price, shown side by side on every listing.</p>
 <p class="chip-row"><code class="chip">search_catalog</code><code class="chip">get_product</code></p>
+<p>The source retailer, the source price and Robodepo&#39;s price, shown side by side on every listing.</p>
 </article>
 <article class="capability-card">
 <h3>Prepare the order in one call</h3>
-<p>Cart, address, delivery quote and a priced purchase mandate, ready for you to open.</p>
 <p class="chip-row"><code class="chip">create_checkout</code></p>
+<p>Cart, address, delivery quote and a priced purchase mandate, ready to open.</p>
 </article>
 <article class="capability-card">
 <h3>Verify and follow up</h3>
-<p>Read the order back, check the trust manifest, leave feedback or cancel before you confirm.</p>
 <p class="chip-row"><code class="chip">get_order</code><code class="chip">get_trust_manifest</code><code class="chip">submit_feedback</code><code class="chip">cancel_checkout</code></p>
+<p>Read the order back, check the trust manifest, leave feedback or cancel before the human confirms.</p>
 </article>
 <article class="capability-card">
 <h3>Read the manual first</h3>
-<p>Full parameters, caveats and worked examples for every tool, or the whole catalogue as one document.</p>
 <p class="chip-row"><code class="chip">get_tool_guide</code><code class="chip">/agent/tools.json</code></p>
+<p>Full parameters, caveats and worked examples for every tool, or the whole catalogue as one document.</p>
 </article>
 </div>
 </section>
@@ -70,10 +75,34 @@
 <section id="handoff" hidden></section>
 
 <section class="decision">
-<h2>You keep the final decision</h2>
-<p>The agent does everything reversible. It searches, prices and prepares the order down to the last detail.</p>
-<p>You see the item, delivery region and total, and approve once, with Touch ID or your device&#39;s own check where available, or a plain button where it isn&#39;t.</p>
-<p>No tool can submit that approval for you.</p>
+<h2>The human keeps the final decision</h2>
+<p>The agent does everything reversible: it searches, prices and prepares the order down to the last detail.</p>
+<p>The human sees the item, delivery region and total, and approves once, with Touch ID or their device&#39;s own check where available, or a plain button where it isn&#39;t.</p>
+<p>No tool can submit that approval for them.</p>
+<figure class="approval-preview">
+<svg class="approval-mock" viewBox="0 0 300 360" role="img" aria-label="Mock of Robodepo's approval page. Heading: Approve sandbox purchase. Item: Holiday Bucket - Beige Canvas, L-XL / Beige. Delivery region: WA 6019. Total: A$125.85. Button: Approve with fingerprint or face.">
+<rect class="am-card" x="4" y="4" width="292" height="352" rx="18"></rect>
+<text class="am-title" x="28" y="46">Approve sandbox purchase</text>
+<line class="am-rule" x1="28" y1="64" x2="272" y2="64"></line>
+<text class="am-label" x="28" y="92">Item</text>
+<text class="am-value" x="28" y="112">Holiday Bucket - Beige Canvas,</text>
+<text class="am-value" x="28" y="130">L-XL / Beige</text>
+<text class="am-label" x="28" y="160">Delivery region</text>
+<text class="am-value" x="28" y="180">WA 6019</text>
+<text class="am-label" x="28" y="210">Total</text>
+<text class="am-value am-total" x="28" y="234">A$125.85</text>
+<g class="am-fingerprint" transform="translate(150,272)">
+<circle class="am-fp-ring" r="26"></circle>
+<path class="am-fp-line" d="M -14 -6 Q 0 -20 14 -6"></path>
+<path class="am-fp-line" d="M -16 2 Q 0 -12 16 2"></path>
+<path class="am-fp-line" d="M -12 10 Q 0 -2 12 10"></path>
+<path class="am-fp-line" d="M -8 16 Q 0 8 8 16"></path>
+</g>
+<rect class="am-button" x="28" y="310" width="244" height="34" rx="8"></rect>
+<text class="am-button-label" x="150" y="332">Approve with fingerprint or face</text>
+</svg>
+<figcaption>The approval moment: item, delivery region, total, one touch.</figcaption>
+</figure>
 <details class="security-detail">
 <summary>How the approval is protected</summary>
 <section id="why-human-confirms">
@@ -101,11 +130,6 @@
 </details>
 </section>
 
-<section class="why-it-works">
-<h2>Why this works when other checkouts don&#39;t</h2>
-<p>Every purchase path here has already been run by real OpenAI and Anthropic agents under sealed test conditions: prices committed before each run, every order independently audited, and any run where the shown price differs from the charged price thrown out. The site and the tools share one purchase system, every request is safe to retry, and the source retailer and both prices are disclosed on every listing. Putting WebMCP in front of an API is easy. Proving the checkout works for agents is the work.</p>
-</section>
-
 <section class="roadmap">
 <h2>Where this is going</h2>
 <p class="roadmap-intro">Robodepo is being built as the mall for agents. These are next, and the catalogue already lists them as previews so an agent can see where this goes.</p>
@@ -114,30 +138,22 @@
 <span class="badge preview">Preview</span>
 <div class="roadmap-body">
 <h3>The best source of product truth</h3>
-<p>Specifications, manuals, review themes and permitted YouTube transcript evidence, cited and kept fresh.</p>
-<p class="chip-row"><code class="chip">get_evidence_pack</code></p>
+<p>Specifications, manuals, review themes and permitted YouTube transcript evidence, cited and kept fresh, returned alongside the product itself.</p>
+<p class="chip-row"><code class="chip">get_product include_evidence</code></p>
 </div>
 </li>
 <li>
 <span class="badge preview">Preview</span>
 <div class="roadmap-body">
-<h3>A custom store for every request</h3>
-<p>A short, checkout-ready shortlist built for the request in front of the agent, instead of thousands of irrelevant pages.</p>
-<p class="chip-row"><code class="chip">create_custom_store</code></p>
-</div>
-</li>
-<li>
-<span class="badge preview">Preview</span>
-<div class="roadmap-body">
-<h3>Search by need</h3>
-<p>Found from the job, constraints and intended use, not just the words that happen to be in a product title.</p>
+<h3>A custom store for every request, found by need</h3>
+<p>A short, checkout-ready shortlist built from the job, constraints and intended use behind the request, not just the words in a product title.</p>
 <p class="chip-row"><code class="chip">search_by_activity</code></p>
 </div>
 </li>
 <li>
 <span class="badge preview">Preview</span>
 <div class="roadmap-body">
-<h3>One way to transact across many merchants</h3>
+<h3>One tool to transact across many merchants</h3>
 <p>One consistent way to research and transact across many merchants. The aim is an aggregation layer spanning millions of merchants and products; today there is one demo product.</p>
 <p class="chip-row"><code class="chip">compare_products</code><code class="chip">get_shipping_options</code></p>
 </div>
@@ -155,7 +171,7 @@
 
 <section class="section-tools">
 <details class="tool-catalogue">
-<summary>Tool catalogue (14 tools)</summary>
+<summary>Tool catalogue (12 tools)</summary>
 <ul class="tools" id="tool-list"></ul>
 </details>
 </section>

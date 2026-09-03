@@ -3,7 +3,7 @@
 Robodepo is a working sandbox store built for AI shopping agents. This repository is a
 WebMCP layer over that store's existing purchase system: an agent searches the catalogue,
 prices a product and fills in the checkout through browser-registered tools, then hands the
-person one link. The person is the only one who can press confirm, on Robodepo's own
+human one link. The human is the only one who can press confirm, on Robodepo's own
 confirmation page. Nothing is charged, ordered or shipped without that single tap.
 
 ## Try it live
@@ -27,7 +27,7 @@ A worked sequence, once the page has registered its tools:
    `confirmation_url`.
 4. Open that `confirmation_url`. It now points at the approval page; touch the sensor
    (fingerprint or face; devices with no biometric get the plain single button instead),
-   and land on the order page. This step is the person's alone: no tool can do it.
+   and land on the order page. This step is the human's alone: no tool can do it.
 5. `get_order`: reads the confirmed order back: item, delivery region, totals.
 
 The only address the sandbox accepts, exactly as shown, field for field:
@@ -60,7 +60,7 @@ That single prompt exercises the whole tool chain: `search_catalog` finds the ha
 `get_product` discloses its source and price, and `create_checkout` runs cart through
 mandate and returns a `confirmation_url`. The agent hands that link back rather than
 trying to press it, because no tool can. Opening the link is the one step that stays with
-the person.
+the human.
 
 ## The full story
 
@@ -92,11 +92,11 @@ defines its exports and does nothing else:
 node -e 'import("./agent/robodepo-webmcp.js").then(m => console.log(JSON.stringify(m.TOOL_CATALOGUE_JSON(), null, 2)))'
 ```
 
-`TOOL_CATALOGUE_JSON()` returns the same fourteen tool definitions (name, title,
+`TOOL_CATALOGUE_JSON()` returns the same twelve tool definitions (name, title,
 description, JSON Schema `inputSchema`, annotations, and a `guide`) that the live page
 registers with `document.modelContext.registerTool()`.
 
-## The 14 tools
+## The 12 tools
 
 Each tool's registered `description` is kept short by design: enough to choose whether to
 call it. The complete guide for every tool (summary, when to use it, what not to use it
@@ -111,7 +111,7 @@ unedited.
 | Tool | Description |
 |---|---|
 | `search_catalog` | Returns the Robodepo demo catalogue as listings with product id, title, availability, the disclosed source retailer and price in AUD integer cents. Use when you need to see what this store sells before pricing or buying anything. Not for one product's full record; use get_product. Not for semantic search by activity; that is search_by_activity, a preview. Full guide: get_tool_guide or /agent/tools.json#search_catalog |
-| `get_product` | Returns one product's published record: title, variant, availability, the source retailer's price and Robodepo's displayed price, both in AUD integer cents. Use when you hold a product_id and want the full record and price disclosure. Not for browsing the catalogue; use search_catalog. Not for cited evidence; that is get_evidence_pack, a preview. Full guide: get_tool_guide or /agent/tools.json#get_product |
+| `get_product` | Returns one product's published record: title, variant, availability, the source retailer's price and Robodepo's displayed price, both in AUD integer cents. Use when you hold a product_id and want the full record and price disclosure. Not for browsing the catalogue; use search_catalog. include_evidence is a roadmap field and is ignored today. Full guide: get_tool_guide or /agent/tools.json#get_product |
 | `create_checkout` | Runs the whole pre-purchase path in one call (cart, item, address, shipping quote, mandate) and returns a priced checkout in AUD integer cents plus the link the person opens to approve it. Use when the person has chosen the product and you are ready to show a final delivered price. Not for placing the order; no tool can, the person approves on Robodepo's own page. Full guide: get_tool_guide or /agent/tools.json#create_checkout |
 | `cancel_checkout` | Closes a checkout prepared in this browser and records the decline, returning status canceled. Use when the person declines, so a refusal is a recorded outcome rather than an inferred one. Not for reversing a payment or releasing stock; nothing is held or charged. Not for after approval; use get_order. Full guide: get_tool_guide or /agent/tools.json#cancel_checkout |
 | `get_order` | Reads back a confirmed sandbox order: status, item, quantity, delivery region and totals in AUD integer cents. Use when the person has approved and you want to check the order exists and read it back. Pass order_id or checkout_id. Not for confirming the order; no tool can. Not for pricing; use create_checkout. Full guide: get_tool_guide or /agent/tools.json#get_order |
@@ -128,11 +128,9 @@ fabricated data.
 
 | Tool | Description |
 |---|---|
-| `search_by_activity` | Preview — not operational in this demo. Describes the roadmap only; returns status not_available and must not be called to do real work. It will find products by what the person is doing rather than the words they typed, returning ranked listings with the reason each was chosen. Use search_catalog today. Full guide: get_tool_guide or /agent/tools.json#search_by_activity |
+| `search_by_activity` | Preview — not operational in this demo. Describes the roadmap only; returns status not_available and must not be called to do real work. It will answer a request with a custom storefront: a short, checkout-ready shortlist chosen from what the person is doing, each item carrying the reason it is on the list, instead of thousands of pages to read. Use search_catalog today. Full guide: get_tool_guide or /agent/tools.json#search_by_activity |
 | `compare_products` | Preview — not operational in this demo. Describes the roadmap only; returns status not_available and must not be called to do real work. It will take two to five product ids and return one aligned comparison, with the cited evidence behind each claim. Use get_product on each id today. Full guide: get_tool_guide or /agent/tools.json#compare_products |
-| `get_evidence_pack` | Preview — not operational in this demo. Describes the roadmap only; returns status not_available and must not be called to do real work. It will return passages from manuals, reviews and buying guides with citations, so a product claim can be checked rather than trusted. Use get_product today. Full guide: get_tool_guide or /agent/tools.json#get_evidence_pack |
 | `get_shipping_options` | Preview — not operational in this demo. Describes the roadmap only; returns status not_available and must not be called to do real work. It will list every shipping service available for a prepared checkout, with price in AUD integer cents and a delivery estimate. Use create_checkout today, which returns the one service that exists. Full guide: get_tool_guide or /agent/tools.json#get_shipping_options |
-| `create_custom_store` | Preview — not operational in this demo. Describes the roadmap only; returns status not_available and must not be called to do real work. It will assemble a checkout-ready storefront for the brief a visiting agent arrives with, and return a link to it. Use search_catalog today. Full guide: get_tool_guide or /agent/tools.json#create_custom_store |
 | `subscribe_replenishment_alerts` | Preview — not operational in this demo. Describes the roadmap only; returns status not_available and must not be called to do real work. It will register a weekly, monthly or quarterly reminder for a consumable, so the person is prompted before they run out. Use get_product today. Full guide: get_tool_guide or /agent/tools.json#subscribe_replenishment_alerts |
 
 ## Response envelope
@@ -165,7 +163,7 @@ Every tool answers with the same shape:
   ],
   "instructions": {
     "for_human": "Open the link to review and confirm your order. Nothing is charged until you do.",
-    "for_agent": "Hand the confirmation_url to the person. No tool can press confirm on their behalf."
+    "for_agent": "Hand the confirmation_url to the human. No tool can press confirm on their behalf."
   }
 }
 ```
@@ -177,10 +175,10 @@ envelope ever carries a cookie value, a CSRF value, a Stripe object, or a full p
 address: the delivery region (`WA 6019`) is the most location detail that leaves the tool
 layer.
 
-## Why the person confirms on Robodepo's own page
+## Why the human confirms on Robodepo's own page
 
 **Experience.** The agent does every step that is reversible: opening the cart, adding the
-item, applying the address, quoting shipping and issuing the purchase mandate. The person
+item, applying the address, quoting shipping and issuing the purchase mandate. The human
 sees the item, the delivery region and the total on one page, with one button. Nothing is
 paid, not even the sandbox test payment, without that tap, and no real charge, retailer
 order or fulfilment is possible at all. The page shows exactly what will be ordered: the
@@ -205,7 +203,7 @@ those reads Robodepo without translation.
 
 `create_checkout`'s `confirmation_url` now points at a same-origin approval page
 (`/approve/{mandateId}`) in front of the unchanged confirmation page, and `links[]` carries
-both `approval_page` and `confirmation_page` so an agent or a person can reach either. The
+both `approval_page` and `confirmation_page` so an agent or a human can reach either. The
 approval page shows the same item, variant, delivery region and total, then asks the
 browser for a platform biometric (Touch ID, a fingerprint or face unlock, Windows Hello), a
 passkey-style user-verification gesture, before submitting the store's own confirmation
@@ -213,7 +211,7 @@ form with the server's unchanged single-use `csrf` value and idempotency key. A 
 no platform authenticator falls back to the plain single button, exactly as
 `/confirm/{mandateId}` has always worked.
 
-This gesture proves a person is present at the device; it is not a server-side control. The
+This gesture proves a human is present at the device; it is not a server-side control. The
 credential it creates is discarded immediately: nothing derived from it is sent to
 Robodepo or anywhere else, and the server has no way to know the gesture happened. Every
 check that actually protects the purchase is unchanged and still runs server-side: the run
@@ -227,7 +225,7 @@ Robodepo store itself, its frozen purchase API (version 1), the human confirmati
 `/confirm/{mandate_id}`, and the trust manifest that discloses how the store operates. None
 of it changed for this submission.
 
-**New work (everything in this repository):** the WebMCP tool layer, its fourteen-tool
+**New work (everything in this repository):** the WebMCP tool layer, its twelve-tool
 catalogue registered with `document.modelContext.registerTool()`, the `/agent` page that
 loads it, the `/agent/tools.json` endpoint that serves the same catalogue as one document
 with every tool's full guide attached, the `/agent/story.md` long-form write-up served

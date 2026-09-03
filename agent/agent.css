@@ -168,7 +168,7 @@ section h2 {
 }
 
 .capability-card p {
-  margin: 0;
+  margin: 0.75rem 0 0;
   color: var(--ink-soft);
   font-size: 0.92rem;
   line-height: 1.55;
@@ -179,6 +179,10 @@ section h2 {
   display: flex;
   flex-wrap: wrap;
   gap: 0.4rem;
+}
+
+.capability-card .chip-row {
+  margin-top: 0.6rem !important;
 }
 
 .chip {
@@ -245,6 +249,81 @@ dl.handoff dd {
 
 .decision > p:last-of-type {
   margin-bottom: 0;
+}
+
+.approval-preview {
+  margin: 1.75rem 0 0;
+  max-width: 260px;
+}
+
+.approval-preview svg,
+.approval-preview img {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.approval-preview figcaption {
+  margin-top: 0.6rem;
+  color: var(--ink-faint);
+  font-size: 0.82rem;
+  line-height: 1.5;
+}
+
+.approval-mock .am-card {
+  fill: var(--paper-raised);
+  stroke: var(--border-strong);
+  stroke-width: 1.5;
+}
+
+.approval-mock .am-title {
+  fill: var(--ink);
+  font: 700 15px var(--font-body);
+}
+
+.approval-mock .am-rule {
+  stroke: var(--border);
+  stroke-width: 1;
+}
+
+.approval-mock .am-label {
+  fill: var(--ink-faint);
+  font: 600 10px var(--font-mono);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.approval-mock .am-value {
+  fill: var(--ink);
+  font: 500 13px var(--font-body);
+}
+
+.approval-mock .am-total {
+  font: 700 17px var(--font-body);
+  fill: var(--accent);
+}
+
+.approval-mock .am-fp-ring {
+  fill: none;
+  stroke: var(--accent);
+  stroke-width: 2;
+}
+
+.approval-mock .am-fp-line {
+  fill: none;
+  stroke: var(--accent);
+  stroke-width: 2;
+  stroke-linecap: round;
+}
+
+.approval-mock .am-button {
+  fill: var(--accent);
+}
+
+.approval-mock .am-button-label {
+  fill: #ffffff;
+  font: 600 12px var(--font-body);
+  text-anchor: middle;
 }
 
 /* --------------------------------- Why it works -------------------------------- */

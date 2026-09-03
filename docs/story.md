@@ -19,7 +19,7 @@ It is being built as the mall for agents: the destination is billions of product
 Open `/agent` in a WebMCP-aware browser and it registers a catalogue of tools directly with the page. No install, no separate agent setup, nothing to configure. Eight of those tools are fully working end to end today:
 
 - **`search_catalog`** finds products in the demo catalogue and is honest that relevance judgement is the agent's own call, not a keyword filter pretending to be one.
-- **`get_product`** returns full product detail, including the source retailer and both the source price and Robodepo's own price, side by side.
+- **`get_product`** returns full product detail, including the source retailer and both the source price and Robodepo's own price, side by side. A roadmap option, `include_evidence`, will add specifications, manuals, review themes and permitted YouTube transcript evidence, cited and fresh.
 - **`create_checkout`** is the hero. One call runs the whole pre-purchase path that used to take several separate steps: cart, address, delivery quote, and a priced, time-limited mandate ready for a person to review.
 - **`cancel_checkout`** records an explicit decline, so a correct refusal becomes a recorded outcome rather than something inferred later from silence.
 - **`get_order`** reads a placed order straight back once a person has approved it.
@@ -61,12 +61,12 @@ The tool names themselves follow a `verb_noun` pattern deliberately aligned with
 
 ## Where this is going
 
-The roadmap groups around what actually helps an agent buy well, not around a longer feature list for its own sake. Every item below already exists as a preview tool in the live catalogue: honestly labelled, returning a plain `status: "not_available"` response, and never called for real work today.
+The roadmap groups around what actually helps an agent buy well, not around a longer feature list for its own sake. Four items below already exist as preview tools in the live catalogue, honestly labelled, returning a plain `status: "not_available"` response, and never called for real work today; one is a roadmap option on a tool that already works.
 
-- **The best source of product truth**, specs, manuals, review themes and permitted YouTube transcript evidence, cited and kept fresh rather than copied from marketing pages (`get_evidence_pack`, `compare_products`).
-- **A custom store per request**, a storefront assembled around what one visiting agent actually asked for (`create_custom_store`).
-- **Search by need**, finding a product by the job it has to do rather than matching words in a listing title (`search_by_activity`).
-- **A universal transaction layer**, the same prepare-then-approve path working across many merchants, not only Robodepo's own catalogue (`get_shipping_options`, and the delegated-checkout direction behind it).
+- **Search by need**, a short, checkout-ready shortlist built for the request instead of a person or an agent trawling thousands of irrelevant pages (`search_by_activity`).
+- **The best source of product truth**, specifications, manuals, review themes and permitted YouTube transcript evidence, cited and kept fresh rather than copied from marketing pages, coming to the working `get_product` tool as an `include_evidence` option.
+- **Side by side comparison**, across products a person or an agent is weighing up (`compare_products`).
+- **One tool to transact across many merchants**, the same prepare-then-approve path working beyond Robodepo's own catalogue (`get_shipping_options`, and the delegated-checkout direction behind it).
 - **Continued assistance**, replenishment reminders and price alerts for the things people buy again (`subscribe_replenishment_alerts`).
 
 ## Before and for the challenge
