@@ -69,8 +69,8 @@ is served straight from that same file at
 [`https://robodepo.shop/agent/story.md`](https://robodepo.shop/agent/story.md) on the live
 deployment:
 
-> The full story of what Robodepo is, what actually works today, and why the checkout can
-> be trusted. Written for anyone reviewing the project, human or agent.
+> The full story of what Robodepo is, what works today, and why the checkout can be
+> trusted. Written for anyone reviewing the project, human or agent.
 
 ## Run it locally
 
@@ -282,6 +282,17 @@ when asked to ship to a postcode this sandbox does not accept.
 
 Trimmed from the full envelope, which also carries `resource` and `links`; the request
 never reached the store, caught client-side before any network call.
+
+### What the evaluation taught us
+
+The rig runs real agents, across ChatGPT, Codex, Claude and Claude Code, through the
+real purchase path, run after run. What it taught us changed the product: agents do
+not fail because the store is broken, they fail the moment a step goes unexplained,
+and an unexplained rejection makes an agent retry blindly. So every response now
+names the field, the fix and the next tool, and what used to take several separate
+purchase steps became one call. Next, the same harness opens as a Test Track, so
+agent developers can prove their own agents against a real checkout before going
+live.
 
 ## Prior work vs new work
 
