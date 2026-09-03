@@ -209,7 +209,8 @@ function refusalResponse(status: number): Response {
 <main>
 <h1>This purchase cannot be approved</h1>
 <p class="lede">Robodepo will not show an approval page for this checkout. It may have expired, already been used, or belong to a different browser. Nothing was ordered and nothing was charged.</p>
-<p class="note">Ask the agent to prepare a new checkout.</p>
+<p class="note">If you opened this link from a chat or another app, go back to the Robodepo page tab and approve there: the page&#39;s panel does it with one touch.</p>
+<p class="note">Otherwise, ask the agent to prepare a new checkout.</p>
 </main>
 </body>
 </html>

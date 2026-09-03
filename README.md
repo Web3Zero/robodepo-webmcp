@@ -250,6 +250,9 @@ still exist, kept as a fallback for a link pasted somewhere the tools aren't reg
 in the same browser. `create_checkout`'s response still carries both `approval_page` and
 `confirmation_page` in `links[]`, so an agent can hand either one across.
 
+Approve on the page's panel; a link opened from a chat or another app carries no session
+and the approval page will refuse.
+
 ## How this is different
 
 What exists today splits into two camps. One camp is merchant-side tooling: Shopify's
